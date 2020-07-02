@@ -13,7 +13,7 @@
 ;; TODO: could midi sync directly via https://github.com/overtone/midi-clj instead of using Max
 #_(def client (osc-client "localhost" 8000))
 (def client (osc-client "192.168.1.9" 8000))
-(def server (osc-server 9000))
+(def server (osc-server 9001))
 #_(osc-close server) 
 
 
@@ -176,20 +176,81 @@ TODO: beat vs pulse vs tick vs meter vs measure
 
 ;; TODO: rename
 (defn with-vel "pairs notes with vel. if note is not a number, it is replaced with empty []. vel defaults to 64"
-  ([ns vel]
+  ([vel ns]
    (map (fn [n] (if (number? n) [n vel] [])) ns))
-  ([ns] (with-vel ns 64)))
+  ([ns] (with-vel 64 ns)))
 
-#_(with-vel [0 1 2] 65)
+#_(with-vel 64 [0 1 2])
+#_(->> [0 1 2]
+       (with-vel 64))
 
 ;; TODO: rename
 (defn chord "pairs notes with vel and flattens"
-  ([ns vel] (flatten (with-vel ns vel)))
-  ([ns] (chord ns 64)))
+  ([vel ns] (flatten (with-vel vel ns)))
+  ([ns] (chord 64 ns)))
 
-#_(chord [ 0 1 2] 65)
-(send-beat 1 (chord [60 64 67] 30))
-(send-beat 2 [])
+#_(chord 62 [ 0 1 2])
+#_(->> [60 64 67 71]
+       (chord 22))
+
+
+(defn merge-seqs "merges the beats of each sequence, using the last sequence's length"
+  [& seqs]
+  (reduce (fn [acc sequence]
+            (map-indexed (fn [i beat] (concat beat (nth sequence i []))) acc))
+          (last seqs)
+          seqs))
+
+(defn rotate-seq "rotates sequence by n"
+  [n s]
+  (map-indexed
+   (fn [i beat] (nth s
+                     (mod (+ i n) (count s))))
+   s))
+
+#_(rotate-seq 1 [0 1 2 3])
+#_(->> [0 1 2 3]
+     (rotate-seq 1))
+
+
+(defn repeat-flat [n coll] (flatten (repeat n coll)))
+
+#_(repeat-flat 5 [1 2])
+#_(->> [1 2]
+       (repeat-flat 5))
+
+(defn map-if-num [fn coll]
+  (map #(if (number? %) (fn %) %)
+       coll))
+
+#_(map-if-num #(+ % %) [0 1 2 :r 3 [] 4])
+#_(->> [0 3 [] :r 4 4] 
+       (map-if-num #(* % 2)))
+
+
+
+(def sequences (atom {}))
+
+
+;; TODO should beats have types merged or as separate sequences?
+;; TODO send sub-beats in send-beat
+(defn send-seq "sends a sequence of beats. if s is a keyword, lookup in sequences"
+  [s type]
+
+  (doseq [[beat data] (map-indexed 
+                       (fn [idx data] [(+ 1 idx) data])
+                       (if (keyword? s)
+                         (@sequences s)
+                         s))]
+    (when-not (empty? data)
+      (send-beat beat 1 type data))))
+
+#_(send-beat 1 1 :note (chord [60 64 67] 30))
+#_(send-beat 2 1 :note (chord [65 69 72] 20))
+#_(send-seq (with-vel [[] [] [] [] 69 [] [] [] [] [] [] []]) :note)
+#_(send-seq (with-vel [[] [] [] [] 69 (chord [72 75 79] 30) [] [] [] [] [] []]) :note)
+#_(clear)
+
 
 (comment "some test sequences"
          (def sequences {:song-1 [[60 50] [96 30] [76 50]
@@ -223,32 +284,6 @@ TODO: beat vs pulse vs tick vs meter vs measure
                          :song-7 [(chord [60 65 68 71]) [] [] [] [] [] [] [] [] [] [] [] [] [] [] ["fn" "song-8"]]
                          :song-8 [(chord [55 67 70 74]) [] [] [] [] [] [] [] [] [] [] [] [] [] [] ["fn" "song-5"]]}))
 
-(defn send-seq "sends a sequence of beats. if s is a keyword, lookup in sequences"
-  [s]
-  (doall
-   (map send-beat
-        (map #(+ 1 %) (range))
-        (if (keyword? s)
-          (sequences s) ; TODO: convert sequencess to an atom
-          s))))
-
-(defn merge-seqs "merges the beats of each sequence, using the first sequence's length"
-  [& seqs]
-  (reduce (fn [acc sequence] (map-indexed (fn [i beat] (concat beat  (nth sequence i []))) acc))
-          seqs))
-
-(defn rotate-seq "rotates sequence by n"
-  [s n]
-  (map-indexed
-   (fn [i beat] (nth s
-                     (mod (+ i n) (count s))))
-   s))
-
-(defn repeat-flat [n coll] (flatten (repeat n coll)))
-
-(defn map-if-num [fn coll]
-  (map #(if (number? %) (fn %) %)
-       coll))
 
 (comment "how to use send-seq"
 
@@ -259,6 +294,19 @@ TODO: beat vs pulse vs tick vs meter vs measure
                               40 :r 40
                               40 :r :r
                               40 :r 40]))
+
+
+         (rotate-seq 2
+          (merge-seqs [[] [] [] []] [[60 10]]) ; TODO why does this return ((60 10 60 10)) ?
+          )
+
+         (->> [[] [] [] []]
+              (merge-seqs [[] [60 10] []]
+                          [[] [] [70 13]])
+              (rotate-seq 1))
+
+         
+         
 
          (send-seq
           (merge-seqs
