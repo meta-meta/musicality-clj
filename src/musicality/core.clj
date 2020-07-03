@@ -13,7 +13,7 @@
 ;; TODO: could midi sync directly via https://github.com/overtone/midi-clj instead of using Max
 #_(def client (osc-client "localhost" 8000))
 (def client (osc-client "192.168.1.9" 8000))
-(def server (osc-server 9001))
+(def server (osc-server 9000))
 #_(osc-close server) 
 
 
@@ -154,7 +154,7 @@ TODO: beat vs pulse vs tick vs meter vs measure
   (apply (partial osc-send client (str "/midiSeq/" (name type) "/" beat "/" sub-beat))
          (map #(if (number? %) (int %) %) data)))
 
-#_(send-beat 1 1 :note [60 23 64 94 67 23 71 51])
+#_(send-beat 1 1 :note [60 23 64 24 67 23 71 51])
 #_(send-beat 1 1 :cc [46 127])
 
 ;; TODO: figure out how to send args. serialize?
@@ -172,7 +172,7 @@ TODO: beat vs pulse vs tick vs meter vs measure
   [] (osc-send client "/midiSeq/clear"))
 
 #_(clear)
-
+#_(dir musicality.core) ;TODO  why doesn't this show anything?
 
 ;; TODO: rename
 (defn with-vel "pairs notes with vel. if note is not a number, it is replaced with empty []. vel defaults to 64"
@@ -229,13 +229,15 @@ TODO: beat vs pulse vs tick vs meter vs measure
 
 
 
+
+
 (def sequences (atom {}))
 
 
 ;; TODO should beats have types merged or as separate sequences?
 ;; TODO send sub-beats in send-beat
 (defn send-seq "sends a sequence of beats. if s is a keyword, lookup in sequences"
-  [s type]
+  [type s]
 
   (doseq [[beat data] (map-indexed 
                        (fn [idx data] [(+ 1 idx) data])
@@ -250,6 +252,29 @@ TODO: beat vs pulse vs tick vs meter vs measure
 #_(send-seq (with-vel [[] [] [] [] 69 [] [] [] [] [] [] []]) :note)
 #_(send-seq (with-vel [[] [] [] [] 69 (chord [72 75 79] 30) [] [] [] [] [] []]) :note)
 #_(clear)
+
+
+
+
+
+
+(->> (merge-seqs 
+
+      (->> [0 4 6 :r :r 6 10 12 :r :r :r 15 10 5]
+           (map-if-num #(+ 31 %))
+           (with-vel 30))
+      
+
+      (->> [0 1 2 [] 1 0 [] [] -2 [] -2 -2]
+           (map-if-num (fn [t] (chord 10 (->> [0 4 7 11] (map #(+ 60 t %))))))))
+
+     (send-seq :note))
+
+(clear)
+
+
+
+
 
 
 (comment "some test sequences"
