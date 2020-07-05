@@ -37,142 +37,226 @@
                  (map #(seg-to-arc-vert % r2)))
             (->> verts
                  (reverse)
-                 (map #(seg-to-arc-vert % r1))))))
+                 (map #(seg-to-arc-vert % r1)))
+            [(seg-to-arc-vert 0 r2)]
+            )))
 
-(defn ring-of-spheres [r r-sphere]
+(defn ring-of-spheres [r r-sphere & {:keys [no-rotate?]}]
   (->> (range 12)
        (map #(translate-on-clockface r %
-                                     (rotate [(/ Math/PI 2)
+                                     (rotate [(if no-rotate?
+                                                0
+                                                (/ Math/PI 2))
                                               0
                                               (* % (/ Math/PI -6))]
                                              (sphere r-sphere))))
-           (union)))
+       (union)))
+
 
 (defn hub [inner outer]
-  (with-fn 24
-    (union
-     (when inner
-       (difference
-        (cylinder 8.6 4)
-        (ring-of-spheres 7.4 1.85)))
-     
-     #_(ring-of-spheres 7.4 1.5)
+  (let [gap-radius 0.5
+        height 4
+        inner-radius 8.6
+        sphere-radius 1.5
+        sphere-gap-radius 0.2
+        outer-z (* sphere-radius 1.2)
+]
 
-     #_(ring-of-spheres 10.4 1.5)
+    (with-fn 144
+      (union
 
-     (when outer
-       (difference
-        (cylinder 13.5 4)
-        (cylinder 9.4 4.1)
-        (ring-of-spheres 10.6 1.9))))))
+       ;; Inner Hub
+       (when inner
 
+         (let [r (- inner-radius (* 1.3 sphere-radius))
+               cup-r (+ sphere-radius sphere-gap-radius)]
+
+           (as-> (cylinder inner-radius (+ 0.6 0.4  (* 2 sphere-radius)) :center false) v
+             (with-fn 36
+             (difference v 
+                         (union
+                          ;; cup
+                          (translate [0 0 cup-r]
+                                     (ring-of-spheres r
+                                                      cup-r
+                                                      :no-rotate? true))
+                          
+                          ;; aperture
+                          (ring-of-spheres r
+                                           (* 1.075 sphere-radius)
+                                           :no-rotate? true))))
+             )))
+
+       #_(ring-of-spheres 7.4 sphere-radius)
+
+
+       ;; Outer Hub
+       (when outer
+         
+
+                    ;; buckyballs (don't print)
+
+         #_(translate [0 0 outer-z] 
+                    (color [1 0 1 1]
+                           (ring-of-spheres (+ inner-radius sphere-radius) sphere-radius)))
+                    
+
+         (difference
+          (with-fn 36
+            (difference
+             (union (with-fn 144 (cylinder 12 0.4 :center false))
+                    (translate [0 0 outer-z]
+                               
+                               (scale [1 1 0.75] (ring-of-spheres (+ (* sphere-radius 0.5) inner-radius)
+                                                                  (* 2.2 sphere-radius)))))
+
+             (translate [0 0 outer-z]
+                        (union
+                         ;; cup
+                         (ring-of-spheres (+ (* 1.1 sphere-radius) inner-radius)
+                                          (+ sphere-radius
+                                             sphere-gap-radius))
+                         ;; aperture
+                         (ring-of-spheres inner-radius (* 1.075 sphere-radius))))))
+                                        ;(cylinder 13.5 4)
+          (cylinder (+ inner-radius gap-radius) (* height 10)) ; inner circle
+          (translate [0 0 (+ 0.6  (* 2 sphere-radius))]  ; top-crop
+                     (cylinder 12 1 :center false))
+))))))
 
 (defn chroma-circle
-  [clockface mask 
+  [clockface mask
    & {:keys [border
              pitch-class-radius
              pitch-class-font-size
-             scale-degree-font-size]}]
+             scale-degree-font-size
+             scale-degree-radius]}]
   (union
-   
-   (when mask     
+
+   (when mask
      (union
-      
+
       ;; Scale degree chord
       (->> [[0 "I"] [2 "ii"] [4 "iii"] [5 "IV"] [7 "V"] [9 "vi"] [11 "vii°"]]
-           (map (fn [[pc role]]
-                  (->> (text role
+           (map (fn [[pc scale-degree]]
+                  (->> (text scale-degree
                              :font "JetBrains Mono"
                              :size scale-degree-font-size :halign "center" :valign "center")
-                       (extrude-linear {:height 0.2})
+                       (extrude-linear {:height 0.2 :center false})
                        (color [0 0 0 1])
                        (rotate [0 0 (* pc (/ Math/PI -6))])
-                       (translate-on-clockface (- pitch-class-radius pitch-class-font-size scale-degree-font-size)
+                       (translate-on-clockface scale-degree-radius #_(- pitch-class-radius
+                                                                        pitch-class-font-size
+                                                                        scale-degree-font-size)
                                                pc)
-                       (translate [0 0 0.6])))))
+                       (translate [0 0 0.4])))))
 
       ;; outer hub
-      (translate [0 0 2.6]
-                 (hub false true))
+      (color [1 1 1 0.75]
+             (difference (hub false true)
+                         (translate [0 0 -10] (cylinder pitch-class-radius 10 :center false))))
+              
 
+      (with-fn 144 ; Scale mask
+        (as-> (cylinder (+ 1 pitch-class-radius border) 0.4 :center false) v
+          
+          (color [1 1 1 0.5] v)
+          (difference v (cylinder 12 1))          
+          (difference v
+                      (->> [0 2 4 5 7 9 11] ; PC window
+                           (map (fn [pc]
+                                  (->> (arc-vertices
+                                        (- pitch-class-radius (- pitch-class-font-size 1))
+                                        (+ pitch-class-radius (- pitch-class-font-size 1))
+                                        (* 0.9 (/ Math/PI 6))
+                                        (* pc
+                                           (/ (* 2 Math/PI) 12))
+                                        12)
+                                       (polygon)
+                                       (extrude-linear {:height 2}))))))
+          (union v (->> [0 2 4 5 7 9 11] ; PC border
+                        (map (fn [pc] 
+                               (->> (arc-vertices
+                                        (- pitch-class-radius (- pitch-class-font-size 1) 0.3)
+                                        (+ pitch-class-radius (- pitch-class-font-size 1) 0.3)
+                                        (* 0.95 (/ Math/PI 6))
+                                        (* pc
+                                           (/ (* 2 Math/PI) 12))
+                                        12)
+                                    (concat (reverse (arc-vertices
+                                                      (- pitch-class-radius (- pitch-class-font-size 1))
+                                                      (+ pitch-class-radius (- pitch-class-font-size 1))
+                                                      (* 0.9 (/ Math/PI 6))
+                                                      (* pc
+                                                         (/ (* 2 Math/PI) 12))
+                                                      12)))
+                                       (polygon)
+                                       (extrude-linear {:height 0.2 :center false})
+                                       (translate [0 0 0.4])
+                                       (color [0 0 0 1]))))))
 
-      ;; Scale mask
-      (->> [0 2 4 5 7 9 11]
-           (map (fn [pc]
-                  (extrude-linear {:height 1}
-                                  (polygon
-                                   (arc-vertices
-                                    (- pitch-class-radius (- pitch-class-font-size 1))
-                                    (+ pitch-class-radius (- pitch-class-font-size 1))
-                                    (* 0.9 (/ Math/PI 6))
-                                    (* pc
-                                       (/ (* 2 Math/PI) 12))
-                                    12)))))
-           (difference (with-fn 144 
-                         (cylinder (+ pitch-class-radius border) 0.3)
-                         (cylinder 9.5 1)
-                         ))
-           (translate [0 0 0.4])
-           (color [1 1 1 0.5]))))
-
-
-   
+          ))))
 
    (when clockface
-     (union 
+     (union
 
       ;; Pitch-class digits
       (->> pitch-class-order
            (map-indexed
             (fn [i pc]
-              (->> (pitch-class pc :h 0.4 :size pitch-class-font-size)
+              (->> (pitch-class pc :h 0.3 :size pitch-class-font-size :center false)
                    (color [0 0 0 1])
                    (translate-on-clockface pitch-class-radius i)
-                   (translate [0 0 0.2])))))
+                   (translate [0 0 0.4])))))
 
-      
+
 
       ;; Inner hub
-      (translate [0 0 2.15]
-                 (hub true false))
+
+      
+      
+      (hub true false) 
+
 
       ;; Outer Ring
       (with-fn 144
         (translate [0 0 0.3]
                    (color [0 0 0 1]
                           (difference
-                           (cylinder (+ pitch-class-radius border) 0.4)
+                           (cylinder (+ pitch-class-radius border) 0.4 :center false)
                            (cylinder (+ pitch-class-radius (* border 0.8)) 1)))))
 
       ;; Clockface
       (with-fn 144
-        (color [1 1 1 1]
-               (cylinder (+ pitch-class-radius border) 0.3)
-                ))))))
+        (as-> (cylinder (+ pitch-class-radius border) 0.3 :center false) v
+          (color [1 1 1 1] v)
+          (difference v (cylinder 8.6 20)) ;hub inner radius
+          ))))))
 
 (spit "output.scad"
-      (write-scad (chroma-circle false true
-                   :border 4
-                   :pitch-class-font-size 4
-                   :pitch-class-radius 24
-                   :scale-degree-font-size 3.2)))
+      (write-scad (chroma-circle 1 nil
+                                 :border 5
+                                 :pitch-class-font-size 4.5
+                                 :pitch-class-radius 24
+                                 :scale-degree-font-size 3.4
+                                 :scale-degree-radius 17)))
 
 
 
-
+;; TODO -- move inner-hub cavities in slightly
+;; TODO -- add some padding to inner-hub to move the bottom up even with outer ring
 
 
 #_(spit "output.scad"
-      (write-scad (union
-                   (intersection 
-                    (->> (arc-vertices 2 10 (/ Math/PI 6) 0 12)
-                         (polygon)
-                         (extrude-linear {:height 5}))
-                    (hub true false))
-                   
-                   (intersection 
-                   (->> (arc-vertices 2 200 (/ Math/PI 6) 0 12)
-                        (polygon)
-                        (extrude-linear {:height 5}))
-                   (hub true true)))
-                  ))
+        (write-scad (union
+                     (intersection
+                      (->> (arc-vertices 2 10 (/ Math/PI 6) 0 12)
+                           (polygon)
+                           (extrude-linear {:height 5}))
+                      (hub true false))
+
+                     (intersection
+                      (->> (arc-vertices 2 200 (/ Math/PI 6) 0 12)
+                           (polygon)
+                           (extrude-linear {:height 5}))
+                      (hub true true)))))
