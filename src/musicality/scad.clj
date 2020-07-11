@@ -7,7 +7,7 @@
 
 (defn pitch-class "extrudes the character for a pitch-class"
   [pc & {:keys [h size]}]
-  (extrude-linear {:height h}
+  (extrude-linear {:height h :center false}
                   (text (name pc)
                         :size size
                         :font (if (contains? #{:૪ :Ɛ} pc)
@@ -127,6 +127,8 @@
 (defn chroma-circle
   [clockface mask
    & {:keys [border
+             clockface-thickness
+             pitch-class-font-thickness
              pitch-class-radius
              pitch-class-font-size
              scale-degree-font-size
@@ -204,10 +206,12 @@
       (->> pitch-class-order
            (map-indexed
             (fn [i pc]
-              (->> (pitch-class pc :h 0.3 :size pitch-class-font-size :center false)
+              (->> (pitch-class pc
+                                :h pitch-class-font-thickness
+                                :size pitch-class-font-size)
                    (color [0 0 0 1])
                    (translate-on-clockface pitch-class-radius i)
-                   (translate [0 0 0.4])))))
+                   (translate [0 0 clockface-thickness])))))
 
 
 
@@ -218,29 +222,55 @@
       (hub true false) 
 
 
+;; Magnet center for big clock
+      #_(with-fn 144
+        (color [0 0 0 1]
+               (translate [0 0 clockface-thickness]
+                          (difference
+                           (cylinder 10 4 :center false)
+                           (cylinder 9 10)))))
+
       ;; Outer Ring
       (with-fn 144
-        (translate [0 0 0.3]
+        (translate [0 0 clockface-thickness]
                    (color [0 0 0 1]
                           (difference
-                           (cylinder (+ pitch-class-radius border) 0.4 :center false)
-                           (cylinder (+ pitch-class-radius (* border 0.8)) 1)))))
+                           (cylinder (+ pitch-class-radius border)
+                                     (* pitch-class-font-thickness 1.25)
+                                     :center false)
+                           (cylinder (+ pitch-class-radius (* border 0.8))
+                                     (* pitch-class-font-thickness 10))))))
 
       ;; Clockface
       (with-fn 144
-        (as-> (cylinder (+ pitch-class-radius border) 0.3 :center false) v
+        (as-> (cylinder (+ pitch-class-radius border)
+                        clockface-thickness
+                        :center false) v
           (color [1 1 1 1] v)
-          (difference v (cylinder 8.6 20)) ;hub inner radius
+          (difference v (cylinder 8.6 (* 10 clockface-thickness))) ;hub inner radius
           ))))))
 
-(spit "output.scad"
-      (write-scad (chroma-circle 1 nil
+
+(spit "3d-print/output.scad"
+      (write-scad (chroma-circle nil 1
                                  :border 5
+                                 :clockface-thickness 0.3
                                  :pitch-class-font-size 4.5
+                                 :pitch-class-font-thickness 0.3
                                  :pitch-class-radius 24
                                  :scale-degree-font-size 3.4
                                  :scale-degree-radius 17)))
 
+;;; Big clock for 0.6 nozzle
+#_(spit "3d-print/output.scad"
+      (write-scad (chroma-circle 1 nil
+                                 :border 18
+                                 :clockface-thickness 0.6
+                                 :pitch-class-font-size 18
+                                 :pitch-class-font-thickness 2
+                                 :pitch-class-radius 70
+                                 :scale-degree-font-size 3.4
+                                 :scale-degree-radius 17)))
 
 
 ;; TODO -- move inner-hub cavities in slightly
