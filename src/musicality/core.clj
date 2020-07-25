@@ -12,10 +12,10 @@
 ;; TODO: musicality.live-compose has dep injection to send/receive OSC
 ;; TODO: could midi sync directly via https://github.com/overtone/midi-clj instead of using Max
 #_(def client (osc-client "localhost" 8000))
-(def client (osc-client "192.168.1.9" 8000))
-(def server (osc-server 9000))
+(def client (osc-client "192.168.1.12" 8000))
+(def server (osc-server 9001))
 #_(osc-close server) 
-
+#_(osc-close client)
 
 ;;; Representing Pitch Classes
 
@@ -166,7 +166,7 @@ TODO: beat vs pulse vs tick vs meter vs measure
      (map #(send-beat 1 % :note [60 60]))))
 
 #_(doseq [n [1 5 9]]
-    (send-beat 1 n :note [60 60]))
+    (send-beat 1 n :note [(+ 60 n) 60]))
 
 (defn clear "clears all data in all beats"
   [] (osc-send client "/midiSeq/clear"))
@@ -258,17 +258,107 @@ TODO: beat vs pulse vs tick vs meter vs measure
 
 
 
-(->> (merge-seqs 
 
-      (->> [0 4 6 :r :r 6 10 12 :r :r :r 15 10 5]
-           (map-if-num #(+ 31 %))
-           (with-vel 30))
-      
 
-      (->> [0 1 2 [] 1 0 [] [] -2 [] -2 -2]
-           (map-if-num (fn [t] (chord 10 (->> [0 4 7 11] (map #(+ 60 t %))))))))
 
-     (send-seq :note))
+(comment "some new sequences 2020-07-24"
+
+         
+         (->> (merge-seqs 
+
+               (->> [0 4 6 :r :r 6 10 12 :r :r :r 15 10 5]
+                    (map-if-num #(+ 31 %))
+                    (with-vel 30))
+               
+               
+               (->> [0 1 2 [] 1 0 [] [] -2 [] -2 -2]
+                    (map-if-num (fn [t] (chord 10 (->> [0 4 7 11] (map #(+ 60 t %))))))))
+              
+              (send-seq :note))
+
+         (clear)
+
+         (defn chord-mask )
+
+         (->> (merge-seqs
+               (let [c1 (->> [0 4 7 11 14] (map #(+ % 42)) (chord 20))
+                     c2 (->> [0 4 7 10 16 -5] (map #(+ % 58)) (chord 15))]
+                 [c1 [] [] [] [] [] [] []
+                  [] c1 [] [] [] [] [] []
+                  c2 [] [] [] [] [] [] []
+                  [] c1 [] [] [] [] [] []])
+
+               (->> [[] 0 2 3 0 7 0 12 -10 -10 17 [] [] [] 22 [] [] 27]
+                    (map-if-num #(+ 60 %))
+                    (with-vel 25))
+
+              #_ (->> [0 :r 0
+                     :r 0 0
+                     :r 0 :r
+                     0 :r 0]
+                    (repeat-flat 4)
+                    (map-if-num (fn [n] (+ 29)))
+                    (with-vel 10)
+                    (rotate-seq 1))
+
+               (->> [0 :r 0
+                     :r 0 0
+                     :r 0 :r
+                     0 :r 0]
+                    (repeat-flat 2)
+                    (map-if-num (fn [n] (+ 21)))
+                    (with-vel 10)
+                    (rotate-seq 5))
+
+               (->> [0 :r 0
+                     :r 0 0
+                     :r 0 :r
+                     0 :r 0]
+                    (repeat-flat 1)
+                    (map-if-num (fn [n] (+ 27)))
+                    (with-vel 10)
+                    (rotate-seq 6))
+
+               
+               (->> (range 32) (map (fn [n] [22 10])))
+               )
+              (send-seq :note))
+
+
+
+         
+         ;; TODO: send sub-beats
+         (->> (merge-seqs
+
+               (with-vel 10 
+                 [40 :r :r
+                  40 :r 40
+                  40 :r :r
+                  40 :r 40]) ; jazz ride
+               
+               (with-vel 0
+                 (rotate-seq 0
+                             [47 :r 47
+                              :r 47 47
+                              :r 47 :r
+                   47 :r 47])
+                 ) ; bembe wheel
+               
+               (with-vel 0
+                 (rotate-seq 0 [66 66 66 :r 66 66 66 :r 69 67 66 :r])
+                 ) ; snare ostenato
+              
+               
+               )         
+          (send-seq :note))
+
+
+)
+
+
+
+
+
 
 (clear)
 
