@@ -12,9 +12,9 @@
 ;; TODO: musicality.live-compose has dep injection to send/receive OSC
 ;; TODO: could midi sync directly via https://github.com/overtone/midi-clj instead of using Max
 #_(def client (osc-client "localhost" 8000))
-(def client (osc-client "192.168.1.12" 8000))
+#_(def client (osc-client "192.168.1.12" 8000))
 (def server (osc-server 9001))
-#_(osc-close server) 
+#_(osc-close server)
 #_(osc-close client)
 
 ;;; Representing Pitch Classes
@@ -136,8 +136,6 @@ TODO: beat vs pulse vs tick vs meter vs measure
                as-chord (chord some-notes) ; 
                ])
 
-
-
          (+ 00 01 10) ; this can be nice
 
          ;; TODO instead of vectors
@@ -146,8 +144,7 @@ TODO: beat vs pulse vs tick vs meter vs measure
                              :cc {0 [1 65] 1 [1 79] 2 [1 0]}}
                             {}
                             {}
-                            {}])
-)
+                            {}]))
 
 (defn send-beat "sends a beat of data to the max sequencer. beat is 1-based; sub-beat is 1-based subdivision of beat; type is one of :fn :note :cc; data is pairs of note vel or fn fn-name"
   [beat sub-beat type data]
@@ -160,10 +157,9 @@ TODO: beat vs pulse vs tick vs meter vs measure
 ;; TODO: figure out how to send args. serialize?
 #_(send-beat 2 1 :fn ["my-fn" "arg1" 2 3])
 
-
 #_(doall
- (->> [1 5 9]
-     (map #(send-beat 1 % :note [60 60]))))
+   (->> [1 5 9]
+        (map #(send-beat 1 % :note [60 60]))))
 
 #_(doseq [n [1 5 9]]
     (send-beat 1 n :note [(+ 60 n) 60]))
@@ -189,10 +185,9 @@ TODO: beat vs pulse vs tick vs meter vs measure
   ([vel ns] (flatten (with-vel vel ns)))
   ([ns] (chord 64 ns)))
 
-#_(chord 62 [ 0 1 2])
+#_(chord 62 [0 1 2])
 #_(->> [60 64 67 71]
        (chord 22))
-
 
 (defn merge-seqs "merges the beats of each sequence, using the last sequence's length"
   [& seqs]
@@ -210,8 +205,7 @@ TODO: beat vs pulse vs tick vs meter vs measure
 
 #_(rotate-seq 1 [0 1 2 3])
 #_(->> [0 1 2 3]
-     (rotate-seq 1))
-
+       (rotate-seq 1))
 
 (defn repeat-flat [n coll] (flatten (repeat n coll)))
 
@@ -224,22 +218,20 @@ TODO: beat vs pulse vs tick vs meter vs measure
        coll))
 
 #_(map-if-num #(+ % %) [0 1 2 :r 3 [] 4])
-#_(->> [0 3 [] :r 4 4] 
+#_(->> [0 3 [] :r 4 4]
        (map-if-num #(* % 2)))
-
-
-
-
 
 (def sequences (atom {}))
 
 
 ;; TODO should beats have types merged or as separate sequences?
 ;; TODO send sub-beats in send-beat
+
+
 (defn send-seq "sends a sequence of beats. if s is a keyword, lookup in sequences"
   [type s]
 
-  (doseq [[beat data] (map-indexed 
+  (doseq [[beat data] (map-indexed
                        (fn [idx data] [(+ 1 idx) data])
                        (if (keyword? s)
                          (@sequences s)
@@ -253,32 +245,22 @@ TODO: beat vs pulse vs tick vs meter vs measure
 #_(send-seq (with-vel [[] [] [] [] 69 (chord [72 75 79] 30) [] [] [] [] [] []]) :note)
 #_(clear)
 
-
-
-
-
-
-
-
-
 (comment "some new sequences 2020-07-24"
 
-         
-         (->> (merge-seqs 
+         (->> (merge-seqs
 
                (->> [0 4 6 :r :r 6 10 12 :r :r :r 15 10 5]
                     (map-if-num #(+ 31 %))
                     (with-vel 30))
-               
-               
+
                (->> [0 1 2 [] 1 0 [] [] -2 [] -2 -2]
                     (map-if-num (fn [t] (chord 10 (->> [0 4 7 11] (map #(+ 60 t %))))))))
-              
+
               (send-seq :note))
 
          (clear)
 
-         (defn chord-mask )
+         (defn chord-mask)
 
          (->> (merge-seqs
                (let [c1 (->> [0 4 7 11 14] (map #(+ % 42)) (chord 20))
@@ -292,14 +274,14 @@ TODO: beat vs pulse vs tick vs meter vs measure
                     (map-if-num #(+ 60 %))
                     (with-vel 25))
 
-              #_ (->> [0 :r 0
-                     :r 0 0
-                     :r 0 :r
-                     0 :r 0]
-                    (repeat-flat 4)
-                    (map-if-num (fn [n] (+ 29)))
-                    (with-vel 10)
-                    (rotate-seq 1))
+               #_(->> [0 :r 0
+                       :r 0 0
+                       :r 0 :r
+                       0 :r 0]
+                      (repeat-flat 4)
+                      (map-if-num (fn [n] (+ 29)))
+                      (with-vel 10)
+                      (rotate-seq 1))
 
                (->> [0 :r 0
                      :r 0 0
@@ -319,18 +301,41 @@ TODO: beat vs pulse vs tick vs meter vs measure
                     (with-vel 10)
                     (rotate-seq 6))
 
+               (->> (range 32) (map (fn [n] [22 10]))))
+              (send-seq :note))
+         (clear)
+
+
+
+         ;; TODO: send sub-beats
+
+         (def jazz-ride [0 :r :r 0 :r 0])
+
+         (->> (merge-seqs
+               (->> (cycle [:r :r 0 :r :r :r 0 :r])
+                    (map-if-num #(+ % 62))
+                    (with-vel 10))
+
+               (->> (cycle [0 0 :r :r])
+                    (take 32)
+                    (map-if-num #(+ % 55))
+                    (rotate-seq 0)
+                    (with-vel 10))
+
                
-               (->> (range 32) (map (fn [n] [22 10])))
+
+               (repeat 32 [])
                )
               (send-seq :note))
 
 
-
          
-         ;; TODO: send sub-beats
-         (->> (merge-seqs
 
-               (with-vel 10 
+
+
+         (->> (merge-seqs
+               
+               (with-vel 10
                  [40 :r :r
                   40 :r 40
                   40 :r :r
@@ -341,31 +346,16 @@ TODO: beat vs pulse vs tick vs meter vs measure
                              [47 :r 47
                               :r 47 47
                               :r 47 :r
-                   47 :r 47])
-                 ) ; bembe wheel
-               
+                              47 :r 47])) ; bembe wheel
+
                (with-vel 0
-                 (rotate-seq 0 [66 66 66 :r 66 66 66 :r 69 67 66 :r])
-                 ) ; snare ostenato
-              
-               
-               )         
-          (send-seq :note))
+                 (rotate-seq 0 [66 66 66 :r 66 66 66 :r 69 67 66 :r])) ; snare ostenato
+               )
+
+              (send-seq :note))
 
 
-)
-
-
-
-
-
-
-(clear)
-
-
-
-
-
+         (clear))
 
 (comment "some test sequences"
          (def sequences {:song-1 [[60 50] [96 30] [76 50]
@@ -399,7 +389,6 @@ TODO: beat vs pulse vs tick vs meter vs measure
                          :song-7 [(chord [60 65 68 71]) [] [] [] [] [] [] [] [] [] [] [] [] [] [] ["fn" "song-8"]]
                          :song-8 [(chord [55 67 70 74]) [] [] [] [] [] [] [] [] [] [] [] [] [] [] ["fn" "song-5"]]}))
 
-
 (comment "how to use send-seq"
 
          (send-seq
@@ -410,18 +399,14 @@ TODO: beat vs pulse vs tick vs meter vs measure
                               40 :r :r
                               40 :r 40]))
 
-
          (rotate-seq 2
-          (merge-seqs [[] [] [] []] [[60 10]]) ; TODO why does this return ((60 10 60 10)) ?
-          )
+                     (merge-seqs [[] [] [] []] [[60 10]]) ; TODO why does this return ((60 10 60 10)) ?
+                     )
 
          (->> [[] [] [] []]
               (merge-seqs [[] [60 10] []]
                           [[] [] [70 13]])
               (rotate-seq 1))
-
-         
-         
 
          (send-seq
           (merge-seqs
@@ -498,7 +483,7 @@ TODO: beat vs pulse vs tick vs meter vs measure
 
 ;; TODO: allow args
 (defn handle-fn "executes fn parsed from osc-msg"
- [osc-msg]
+  [osc-msg]
   (let [msg (first (:args osc-msg))
         fn-keyword (keyword msg)]
     (if (contains? fns fn-keyword)
@@ -510,3 +495,8 @@ TODO: beat vs pulse vs tick vs meter vs measure
     nil))
 
 (osc-handle server "/fn" #'handle-fn)
+
+(dir musicality.core)
+
+
+
