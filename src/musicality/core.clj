@@ -11,11 +11,34 @@
 ;;; Start OSC
 ;; TODO: musicality.live-compose has dep injection to send/receive OSC
 ;; TODO: could midi sync directly via https://github.com/overtone/midi-clj instead of using Max
-#_(def client (osc-client "localhost" 8000))
-#_(def client (osc-client "192.168.1.12" 8000))
-(def server (osc-server 9001))
+(def client (osc-client "localhost" 8000))
+#_(def client qq(osc-client "192.168.1.12" 8000))
+
+#_(def server (osc-server 9003))
 #_(osc-close server)
 #_(osc-close client)
+
+
+;;; OSC Listeners
+(def fns (atom {}))
+
+(defn handle-fn "executes fn parsed from osc-msg"
+  [osc-msg]
+  (let [msg (first (:args osc-msg))
+        fn-keyword (keyword msg)
+        fns @fns]
+    (if (contains? fns fn-keyword)
+      ((fns fn-keyword))
+      (println (str "couldn't find fn " fn-keyword)))
+    nil))
+
+(osc-handle server "/fn" #'handle-fn)
+
+#_(swap! fns assoc :fn1 #(println "abacab"))
+#_(send-beat 1 :fn "fn1")
+
+
+
 
 ;;; Representing Pitch Classes
 
@@ -25,23 +48,23 @@
 
 
 ;; Rather than try to solve this with a different char or something, use keywords.
-(def pitch-classes #{:0 :1 :2 :3 :4 :5 :6 :7 :8 :9 :૪ :Ɛ})
+(def pcs "pitch-class keywords" #{:0 :1 :2 :3 :4 :5 :6 :7 :8 :9 :૪ :Ɛ})
 ;; TODO (annoying that :0 is not highlighted with clojure-keyword-face)
 ;; https://stackoverflow.com/questions/39192226/create-a-keyword-from-a-number  - maybe not highlighting because it's in a grey area
 
 ;; We can order these, but to simply define them, I think it's more formal/precise to define as a set.
-(def pitch-class-order [:0 :1 :2 :3 :4 :5 :6 :7 :8 :9 :૪ :Ɛ])
+(def pcs-ordered "pitch-class keywords in order" [:0 :1 :2 :3 :4 :5 :6 :7 :8 :9 :૪ :Ɛ])
 
 ;; This gives us the order, but it is not isomorphic to the thing we're trying to represent. :0 should technically follow :Ɛ because the shape of the pitch-class-space makes it so. We could operate on the pitch-classes indirectly via mod12 int arithmetic. To do so, we'd have to convert pc->int and then int->pc
 
 (def pc->int "returns int corresponding to pitch-class keyword"
-  (zipmap pitch-class-order (range)))
+  (zipmap pcs-ordered (range)))
 
 #_(pc->int :Ɛ)
 #_(map pc->int pitch-class-order)
 
 (defn int->pc "returns pitch-class keyword corresponsing to int"
-  [x] (nth pitch-class-order (mod x (count pitch-class-order)) x))
+  [x] (nth pcs-ordered (mod x (count pcs-ordered)) x))
 
 #_(map int->pc (range 24))
 
@@ -50,27 +73,28 @@
 #_(map #(int->pc (+ -5 (pc->int %))) [:0 :4 :7 :Ɛ])
 
 ;; Or we could define an infinite cycle
-(def pitch-class-cycle-up "a lazy cycle of pitch-classes in ascending order"
-  (cycle pitch-class-order))
+(def pcs-cycle-up "a lazy cycle of pitch-classes in ascending order"
+  (cycle pcs-ordered))
 #_(take 36 pitch-class-cycle-up)
 
-(def pitch-class-cycle-dn "a lazy cycle of pitch-classes in descending order"
+(def pcs-cycle-dn "a lazy cycle of pitch-classes in descending order"
   (drop 11 ; drop 11 to start on 0
-        (cycle (reverse pitch-class-order))))
+        (cycle (reverse pcs-ordered))))
 #_(take 36 pitch-class-cycle-dn)
 
-(defn pitch-class-rotate "rotates x in pitch-class-space by rot"
+(defn pc-rotate "rotates x in pitch-class-space by rot"
   [x rot]
   (first (drop (Math/abs rot)
                (drop-while #(not (= x %))
                            (if  (pos? rot)
-                             pitch-class-cycle-up
-                             pitch-class-cycle-dn)))))
+                             pcs-cycle-up
+                             pcs-cycle-dn)))))
 #_(map #(pitch-class-rotate % 7) [:0 :4 :7 :Ɛ])
 #_(map #(pitch-class-rotate % -5) [:0 :4 :7 :Ɛ])
 
-(defn pitch-class-rotate-all "rotates xs in pitch-class-space by rot"
-  [xs rot] (map #(pitch-class-rotate %1 rot) xs))
+; TODO: is this necessary? pretty basic map
+(defn pcs-rotate "rotates xs in pitch-class-space by rot"
+  [xs rot] (map #(pc-rotate %1 rot) xs))
 
 #_(pitch-class-rotate-all [:0 :4 :7 :Ɛ] 7)
 ;; TODO: should this be legal? seems convenient.
@@ -84,10 +108,10 @@
 
 
 (comment "Terms
-* beat: a collection of events to be added to the measure.
-* sub-beat: a collection of events at subdivisions of a beat
+* beat: a collection of events scheduled to fire at some subdivision of a measure.
+* sub-beat: a collection of events scheduled to fire at some subdivision of a beat
 * event: could be a MIDI event or a fn (or an osc message to be sent to a max synthesizer?)
-* measure: a collection of beats that is looped by the sequencer
+* measure: a collection of beats (and sub-beats) that is looped by the sequencer
 
 
 TODO: beat vs pulse vs tick vs meter vs measure
@@ -146,12 +170,22 @@ TODO: beat vs pulse vs tick vs meter vs measure
                             {}
                             {}]))
 
-(defn send-beat "sends a beat of data to the max sequencer. beat is 1-based; sub-beat is 1-based subdivision of beat; type is one of :fn :note :cc; data is pairs of note vel or fn fn-name"
-  [beat sub-beat type data]
-  (apply (partial osc-send client (str "/midiSeq/" (name type) "/" beat "/" sub-beat))
-         (map #(if (number? %) (int %) %) data)))
 
+;;; Scheduling - TODO: break into separate ns?
+
+(defn send-beat "sends a beat of data to the max sequencer. beat is 1-based; sub-beat is 1-based subdivision of beat; type is one of :fn :note :cc; data is [note vel] or [cc val] or fn-name"
+  ([beat sub-beat type data]
+   (apply (partial osc-send client (str "/midiSeq/" (name type) "/" beat "/" sub-beat))
+          (if (= type :fn)
+            [data]
+            (map #(if (number? %) (int %) %) data))))
+  ([beat type data]
+   (send-beat beat 1 type data)))
+
+
+#_(send-beat 1 :fn "fn1")
 #_(send-beat 1 1 :note [60 23 64 24 67 23 71 51])
+#_(send-beat 1 :note [60 23 64 24 67 23 71 51])
 #_(send-beat 1 1 :cc [46 127])
 
 ;; TODO: figure out how to send args. serialize?
@@ -194,7 +228,7 @@ TODO: beat vs pulse vs tick vs meter vs measure
   (reduce (fn [acc sequence]
             (map-indexed (fn [i beat] (concat beat (nth sequence i []))) acc))
           (last seqs)
-          seqs))
+          (drop-last seqs)))
 
 (defn rotate-seq "rotates sequence by n"
   [n s]
@@ -207,13 +241,19 @@ TODO: beat vs pulse vs tick vs meter vs measure
 #_(->> [0 1 2 3]
        (rotate-seq 1))
 
+;; TODO prob not necessary. use take and cycle
 (defn repeat-flat [n coll] (flatten (repeat n coll)))
 
 #_(repeat-flat 5 [1 2])
+#_(take 10 (cycle [1 2]))
 #_(->> [1 2]
        (repeat-flat 5))
+#_(->> [1 2]
+     (cycle)
+     (take 10))
 
-(defn map-if-num [fn coll]
+(defn map-if-num "Applies fn to each member of coll that is a number. Leaves non-numbers unchanged."
+  [fn coll]
   (map #(if (number? %) (fn %) %)
        coll))
 
@@ -239,10 +279,10 @@ TODO: beat vs pulse vs tick vs meter vs measure
     (when-not (empty? data)
       (send-beat beat 1 type data))))
 
-#_(send-beat 1 1 :note (chord [60 64 67] 30))
-#_(send-beat 2 1 :note (chord [65 69 72] 20))
-#_(send-seq (with-vel [[] [] [] [] 69 [] [] [] [] [] [] []]) :note)
-#_(send-seq (with-vel [[] [] [] [] 69 (chord [72 75 79] 30) [] [] [] [] [] []]) :note)
+#_(send-beat 1 1 :note (chord 30 [60 64 67]))
+#_(send-beat 2 1 :note (chord 20 [65 69 72]))
+#_(send-seq :note (with-vel [[] [] [] [] 69 [] [] [] [] [] [] []]))
+#_(send-seq :note [[] [] [] [] [69 30] (chord 20 [72 77 80]) [] [] [] [] [] []])
 #_(clear)
 
 (comment "some new sequences 2020-07-24"
@@ -313,6 +353,7 @@ TODO: beat vs pulse vs tick vs meter vs measure
 
          (->> (merge-seqs
                (->> (cycle [:r :r 0 :r :r :r 0 :r])
+                    (take 32)
                     (map-if-num #(+ % 62))
                     (with-vel 10))
 
@@ -341,14 +382,14 @@ TODO: beat vs pulse vs tick vs meter vs measure
                   40 :r :r
                   40 :r 40]) ; jazz ride
                
-               (with-vel 0
+               (with-vel 10
                  (rotate-seq 0
                              [47 :r 47
                               :r 47 47
                               :r 47 :r
                               47 :r 47])) ; bembe wheel
 
-               (with-vel 0
+               (with-vel 4
                  (rotate-seq 0 [66 66 66 :r 66 66 66 :r 69 67 66 :r])) ; snare ostenato
                )
 
@@ -357,144 +398,9 @@ TODO: beat vs pulse vs tick vs meter vs measure
 
          (clear))
 
-(comment "some test sequences"
-         (def sequences {:song-1 [[60 50] [96 30] [76 50]
-                                  [62 50] [90 50] [72 50]
-                                  [64 50] [] [74 50]
-                                  [66 50] [] ["fn" "song-2"]]
 
-                         :song-2 [[67 50 50 40 47 50 71 30] [] []
-                                  [64 50 33 40 49 50 71 30] [] []
-                                  [63 50 30 40 51 50 73 30] [] []
-                                  [62 50 40 40 63 50 74 30] [] [90 60 95 60 "fn" "song-1"]]
 
-                         :song-3 (map (fn [n] [;; (+ 60 (* 2 n)) 65 
-                                               (+ 64 (* 1 n)) 65
-                                               (- 59 (* 4 n)) 65]) (range 12))
 
-                         :song-4 [[60 50] [] [] [] [62 50] [64 50] [] [] [] [] [] [66 50]]
-
-                                        ;              :song-5 [[] [] [] [90 10 101 5] [] [] [] [] [30 10] (chord [60 64 67 71]) [] ["fn" "song-6"]]
-                                        ;             :song-6 [(chord [64 68 73]) (chord (map #(+ 2 %) [64 68 73])) [] [] [] [] [] [] [] [] [] ["fn" "song-7"]]
-                                        ;            :song-7 [[69 50] [] [] [] [] [] [69 10] [] [] [] [] ["fn" "song-8"]]
-                                        ;           :song-8 [(chord [56 59 63 67]) [] [] [] [] [] [59 10] [] [] [] [] ["fn" "song-5"]]
-
-                                        ;              :song-5 [[60 40] [] [] [] [67 40] [] [] [] [65 30 58 10] [] [] [] (chord [67 71 75 79]) [] [] ["fn" "song-6"]]
-                                        ;              :song-6 [[] [] [] [] [] [] [] [] (chord [46]) [] [] [] [] [] [] ["fn" "song-7"]]
-                                        ;              :song-7 [(chord [60 65 68 71]) [] [] [] [] [] [] [] [] [] [] [] [] [] [] ["fn" "song-8"]]
-                                        ;              :song-8 [(chord [55 67 70 74]) [] [] [] [] [] [] [] [] [] [] [] [] [] [] ["fn" "song-5"]]
-
-                         :song-5 [[60 40] [] [] [] [67 40] [] [] [] [65 30 58 10] [] [] [] (chord [67 71 75 79]) [] [] ["fn" "song-6"]]
-                         :song-6 [[60 40] [] [] [] [67 40] [] [] [] [65 30 58 10] [] [] [] (chord [67 71 75 79]) [] [] ["fn" "song-7"]]
-                         :song-7 [(chord [60 65 68 71]) [] [] [] [] [] [] [] [] [] [] [] [] [] [] ["fn" "song-8"]]
-                         :song-8 [(chord [55 67 70 74]) [] [] [] [] [] [] [] [] [] [] [] [] [] [] ["fn" "song-5"]]}))
-
-(comment "how to use send-seq"
-
-         (send-seq
-          (with-vel (map #(+ 60 (* 2 %)) (range 12)) 20))
-
-         (send-seq (with-vel [40 :r :r
-                              40 :r 40
-                              40 :r :r
-                              40 :r 40]))
-
-         (rotate-seq 2
-                     (merge-seqs [[] [] [] []] [[60 10]]) ; TODO why does this return ((60 10 60 10)) ?
-                     )
-
-         (->> [[] [] [] []]
-              (merge-seqs [[] [60 10] []]
-                          [[] [] [70 13]])
-              (rotate-seq 1))
-
-         (send-seq
-          (merge-seqs
-
-           (with-vel (repeat 32 []))
-
-           (with-vel (rotate-seq (map #(+ 32 (* 5 %)) (range 12)) 2) 1)
-
-           (with-vel (repeat-flat 8 [30 :r :r]) 5) ; four on floor
-
-           ;; (with-vel (repeat-flat 2 [:r :r :r 78 :r :r]) 10) ; 2 and 4
-
-           (with-vel (map-if-num #(+ 38 %) [40 :r :r
-                                            40 :r 40
-                                            40 :r :r
-                                            40 :r 40]) 10) ; jazz ride
-           (with-vel
-             (rotate-seq
-              (repeat-flat 3 (map #(if (number? %) (+ 66 %) %)
-                                  [0 :r 0
-                                   :r 0 0
-                                   :r 0 :r
-                                   0 :r 0])) 6)
-             5) ; bembe wheel
-
-           (with-vel
-             (rotate-seq (map-if-num
-                          #(- % 20)
-                          (identity [66 66 66 :r 56 60 66 :r 66 67 66 :r
-                                     :r :r :r 54 :r :r :r :r 69 67 66 56])) 10)
-             1)) ; snare ostenato
-          )
-
-; number 2
-         (send-seq
-          (merge-seqs
-
-           (with-vel (rotate-seq (map #(+ 66 (* 4 %)) (range 12)) 2) 0)
-
-           (with-vel (repeat-flat 4 [60 :r :r]) 0) ; four on floor
-
-           (with-vel (repeat-flat 2 [:r :r :r 77 :r :r]) 0) ; 2 and 4
-
-           (with-vel [40 :r :r
-                      40 :r 40
-                      40 :r :r
-                      40 :r 40] 0) ; jazz ride
-           (with-vel
-             (rotate-seq
-              [47 :r 47
-               :r 47 47
-               :r 47 :r
-               47 :r 47] 0)
-             0) ; bembe wheel
-
-           (with-vel
-             (rotate-seq [66 66 66 :r 66 66 66 :r 69 67 66 :r] 0)
-             0)) ; snare ostenato
-          )
-
-         (send-beat 12
-                    ["fn"
-                     (str '#(send-beat 11 [90 20]))])
-
-         ((eval (read-string (str '#(send-beat 11 [80 20])))))
-
-         (send-seq (with-vel [40 :r :r
-                              40 :r 40
-                              40 :r :r
-                              40 :r 40])))
-
-;; TODO: atom
-(def fns {:fn1 #()})
-
-;; TODO: allow args
-(defn handle-fn "executes fn parsed from osc-msg"
-  [osc-msg]
-  (let [msg (first (:args osc-msg))
-        fn-keyword (keyword msg)]
-    (if (contains? fns fn-keyword)
-      (eval (fns fn-keyword))
-      (do ; TODO figure out how to literal
-;        ((eval (read-string msg)))
-;        (println (eval (read-string msg)))
-        ))
-    nil))
-
-(osc-handle server "/fn" #'handle-fn)
 
 (dir musicality.core)
 
