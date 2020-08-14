@@ -177,13 +177,13 @@ TODO: beat vs pulse vs tick vs meter vs measure
   ([beat sub-beat type data]
    (apply (partial osc-send client (str "/midiSeq/" (name type) "/" beat "/" sub-beat))
           (if (= type :fn)
-            [data]
+            [(name data)]               ;data is a keyword referring to a fn in fns map
             (map #(if (number? %) (int %) %) data))))
   ([beat type data]
    (send-beat beat 1 type data)))
 
 
-#_(send-beat 1 :fn "fn1")
+#_(send-beat 1 :fn :fn1)
 #_(send-beat 1 1 :note [60 23 64 24 67 23 71 51])
 #_(send-beat 1 :note [60 23 64 24 67 23 71 51])
 #_(send-beat 1 1 :cc [46 127])
@@ -205,6 +205,7 @@ TODO: beat vs pulse vs tick vs meter vs measure
 #_(dir musicality.core) ;TODO  why doesn't this show anything?
 
 ;; TODO: rename
+;; TODO: pair with vel-seq, cycle vel-seq
 (defn with-vel "pairs notes with vel. if note is not a number, it is replaced with empty []. vel defaults to 64"
   ([vel ns]
    (map (fn [n] (if (number? n) [n vel] [])) ns))
@@ -377,26 +378,94 @@ TODO: beat vs pulse vs tick vs meter vs measure
          (->> (merge-seqs
                
                (with-vel 10
-                 [40 :r :r
-                  40 :r 40
-                  40 :r :r
-                  40 :r 40]) ; jazz ride
+                 [6 :r :r
+                  6 :r 6
+                  6 :r :r
+                  6 :r 6]) ; jazz ride
                
                (with-vel 10
                  (rotate-seq 0
-                             [47 :r 47
-                              :r 47 47
-                              :r 47 :r
-                              47 :r 47])) ; bembe wheel
+                             [02 :r 02
+                              :r 02 02
+                              :r 02 :r
+                              02 :r 02])) ; bembe wheel
 
-               (with-vel 4
-                 (rotate-seq 0 [66 66 66 :r 66 66 66 :r 69 67 66 :r])) ; snare ostenato
+               (with-vel 10 (take 12 (cycle [0 :r :r])))
+
+              (with-vel 4
+                 (rotate-seq 0 [1 1 1 :r 1 1 1 :r 1 1 1 :r])) ; snare ostenato
                )
 
               (send-seq :note))
 
 
-         (clear))
+         (clear)
+
+
+         ;; alternate between two seqs by scheduling fns
+         (let [seqA (->> (merge-seqs
+        
+                          (with-vel 10
+                            [6 :r :r
+                             6 :r 6
+                             6 :r :r
+                             6 :r 6]) ; jazz ride
+        
+        
+                          (with-vel 10 (take 12 (cycle [0 :r :r])))
+        
+                          (with-vel 4
+                            (rotate-seq 0 [1 1 1 :r 1 1 1 :r 1 1 1 :r])) ; snare ostenato
+                          ))
+        
+               seqB (->> (merge-seqs
+        
+                          (with-vel 10
+                            (rotate-seq 0
+                                        [02 :r 02
+                                         :r 02 02
+                                         :r 02 :r
+                                         02 :r 02])) ; bembe wheel
+        
+                          (with-vel 10 (take 12 (cycle [0 :r :r])))
+        
+                          (with-vel 4
+                            (rotate-seq 0 [1 1 1 :r 1 1 1 :r 1 1 1 :r])) ; snare ostenato
+                          ))]
+        
+           (swap! fns assoc :fn1 #(do
+                                    (clear)
+                                    (send-seq :note seqB)
+                                    (send-beat 12 1 :fn :fn2)))
+           (swap! fns assoc :fn2 #(do
+                                    (clear)
+                                    (send-seq :note seqA)
+                                    (send-beat 12 1 :fn :fn1)))
+        
+           ((:fn1 @fns)))
+
+         (defn bin->rhy [n vel bin-seq]
+           (->> bin-seq
+                (map #(if (= 0 %) [] n))
+                (with-vel vel)))
+
+         (clear)
+         (send-seq :note 
+                   (merge-seqs
+                    
+                    (->> [0 0 1]
+                         (repeat-flat 2)
+                         (bin->rhy 2 10))
+                    
+                    (->> [1 1 0]
+                         (repeat-flat 4)
+                         (bin->rhy 0 10))
+                    ))
+
+
+         )
+
+
 
 
 
