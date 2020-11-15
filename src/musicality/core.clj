@@ -14,7 +14,7 @@
 (def client (osc-client "localhost" 8000))
 #_(def client qq(osc-client "192.168.1.12" 8000))
 
-#_(def server (osc-server 9003))
+(def server (osc-server 9003))
 #_(osc-close server)
 #_(osc-close client)
 
@@ -224,6 +224,7 @@ TODO: beat vs pulse vs tick vs meter vs measure
 #_(->> [60 64 67 71]
        (chord 22))
 
+; TODO: take an explicit length instead of using the final seq
 (defn merge-seqs "merges the beats of each sequence, using the last sequence's length"
   [& seqs]
   (reduce (fn [acc sequence]
@@ -402,6 +403,156 @@ TODO: beat vs pulse vs tick vs meter vs measure
          (clear)
 
 
+         (let [a (->> (merge-seqs
+
+                       (->> [[:Ɛ :3 :6] [] [] [] [] []
+                             [:Ɛ :5 :6] [] [] [] [] []
+                             [:1 :6 :8] [] [] [] [] []
+                             [:3 :5 :6] [] [] [] [] []]
+                            (map (fn [c] (map #(+ (pc->int %) 60) c)))
+                            (map #(chord 20 %))
+                            )
+
+                       (->> [[] [:૪] [:1] [:8] [] [:5]
+                             [] [:1] [] [] [] []
+                             [] [:1] [:૪] [:3] [] [:1]
+                             [] [:૪] [] [] [] []]
+                            (map (fn [c] (map #(+ (pc->int %) 72) c)))
+                            (map #(chord 20 %))
+                            )
+                       
+                       )
+                      )
+               b (->> (merge-seqs
+
+                       (->> [[:Ɛ :3 :6] [] [] [] [] []
+                             [:1 :3 :6] [] [] [] [] []
+                             [:3 :5 :6] [] [] [] [] []
+                             [] [] [] [] [] []]
+                            (map (fn [c] (map #(+ (pc->int %) 60) c)))
+                            (map #(chord 20 %))
+                            )
+
+                       (->> [[:8] [] [] [] [] []
+                             [] [] [:3] [] [:૪] []
+                             [:8] [] [] [] [] []
+                             [:1] [] [] [] [] []]
+                            (map (fn [c] (map #(+ (pc->int %) 72) c)))
+                            (map #(chord 20 %))
+                            )
+                       
+                       )
+                      )
+
+               c1 (->> (merge-seqs
+
+                       (->> [[:Ɛ :6] [] [] [] [] []
+                             [:1 :3] [] [] [] [] []
+                             [:૪ :3] [] [] [] [] []
+                             [:1 :6] [] [] [] [] []]
+                            (map (fn [c] (map #(+ (pc->int %) 60) c)))
+                            (map #(chord 20 %))
+                            )
+
+                       (->> [[] [] [] [] [] []
+                             [] [] [] [] [] []
+                             [] [] [] [] [] []
+                             [] [] [:1] [] [] []]
+                            (map (fn [c] (map #(+ (pc->int %) 72) c)))
+                            (map #(chord 20 %))
+                            )
+                       
+                       )
+                      )
+               c2 (->> (merge-seqs
+
+                       (->> [[:Ɛ :6] [] [] [] [] []
+                             [:1 :3] [] [] [] [] []
+                             [:3 :7 :૪] [] [] [] [] []
+                             [] [] [] [] [] []]
+                            (map (fn [c] (map #(+ (pc->int %) 60) c)))
+                            (map #(chord 20 %))
+                            )
+
+                       (->> [[] [] [] [] [] []
+                             [] [] [] [] [] []
+                             [] [] [] [] [] []
+                             [] [] [] [] [] []]
+                            (map (fn [c] (map #(+ (pc->int %) 72) c)))
+                            (map #(chord 20 %))
+                            )
+                       
+                       )
+                      )
+               d (->> (merge-seqs
+
+                       (->> [[:Ɛ :8 :4] [] [] [] [] []
+                             [] [] [] [] [] []
+                             [:3 :7 :૪] [] [] [] [] []
+                             [] [] [] [] [] []]
+                            (map (fn [c] (map #(+ (pc->int %) 60) c)))
+                            (map #(chord 20 %))
+                            )
+
+                       (->> [[:3] [:1] [:3] [:1] [:3] []
+                             [:3] [] [:3] [:1] [:3] [:Ɛ]
+                             [:0] [:2] [:3] [:5] [:7] [:9]
+                             [:૪] [:2] [:7] [] [] []]
+                            (map (fn [c] (map #(+ (pc->int %) 72) c)))
+                            (map #(chord 20 %))
+                            )
+                       
+                       )
+                      )
+               e (->> (merge-seqs
+
+                       (->> [[:6 :8 :૪] [] [] [] [] []
+                             [:5 :8 :૪] [] [] [] [] []
+                             [:3 :8 :૪] [] [] [] [] []
+                             [:3 :7 :૪] [] [] [] [] []]
+                            (map (fn [c] (map #(+ (pc->int %) 60) c)))
+                            (map #(chord 20 %))
+                            )
+
+                       (->> [[:7] [:3] [] [:૪] [] [:6]
+                             [:7] [] [] [:3] [] []
+                             [:3] [] [] [] [] []
+                             [] [] [] [] [] []]
+                            (map (fn [c] (map #(+ (pc->int %) 72) c)))
+                            (map #(chord 20 %))
+                            )
+                       
+                       )
+                      )
+
+               
+               seq [a a b c1 b c2 d e a c2]
+               ]
+
+           
+           (swap! fns assoc :fn1-state 0)
+
+           (swap! fns assoc :fn1 #(do
+                                    
+                                    (clear)
+                                    (let [idx (:fn1-state @fns)]
+                                      (if (= idx (count seq))
+                                        (clear)
+                                        (do
+                                          (send-seq :note (nth seq (:fn1-state @fns)))
+                                          (swap! fns assoc :fn1-state
+                                                 (mod (+ 1 (:fn1-state @fns))
+                                                      (count seq)))
+                                          (send-beat 24 1 :fn :fn1)
+                                          )))
+                                    
+                                    ))           
+           )
+
+         ((:fn1 @fns))
+
+         (clear)
+
          ;; alternate between two seqs by scheduling fns
          (let [seqA (->> (merge-seqs
         
@@ -453,15 +604,30 @@ TODO: beat vs pulse vs tick vs meter vs measure
          (send-seq :note 
                    (merge-seqs
                     
-                    (->> [0 0 1]
-                         (repeat-flat 2)
-                         (bin->rhy 2 10))
+                    (->> [0 1 1 1 0 0 1 1 1 0 0 0]
+                         (repeat-flat 4) ; TODO: repeat to fill length n 
+                         (bin->rhy 2 60))
                     
-                    (->> [1 1 0]
-                         (repeat-flat 4)
-                         (bin->rhy 0 10))
+                    (->> [1 0 0 0 0 1 0 0 0 0 0 0]
+                         (repeat-flat 8)
+                         (bin->rhy 0 60))
                     ))
 
+
+         (clear)
+         (send-seq (merge-seqs
+                    
+                    (->> [0 1 1 1 0 0 1 1 1 0 0 0]
+                         (repeat-flat 4) ; TODO: repeat to fill length n 
+                         (bin->rhy 2 60))
+                    
+                    (->> [1 0 0 0 0 1 0 0 0 0 0 0]
+                         (repeat-flat 8)
+                         (bin->rhy 0 60))
+                    )) ; play at 64/16, 16BPI
+
+;         [013568૪7_7_6767_7__]
+;
 
          )
 
