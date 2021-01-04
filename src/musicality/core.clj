@@ -1,44 +1,10 @@
 (ns musicality.core
-  (:use [overtone.osc :only (osc-client osc-close osc-handle osc-rm-handler osc-send osc-server)])
   (:gen-class)) ; https://github.com/bbatsov/clojure-style-guide#prefer-require-over-use
 
 ;;;; Musicality Live-compose
 
 ;;; The idea is to distill musical ideas and rearrange them on the fly. To decompose and recompose. To refactor music.
 ;;; The notes on a staff are a publication. They are output. They are instructions, removed from the ideas behind the notes.
-
-
-;;; Start OSC
-;; TODO: musicality.live-compose has dep injection to send/receive OSC
-;; TODO: could midi sync directly via https://github.com/overtone/midi-clj instead of using Max
-(def client (osc-client "localhost" 8000))
-#_(def client qq(osc-client "192.168.1.12" 8000))
-
-(def server (osc-server 9003))
-#_(osc-close server)
-#_(osc-close client)
-
-
-;;; OSC Listeners
-(def fns (atom {}))
-
-(defn handle-fn "executes fn parsed from osc-msg"
-  [osc-msg]
-  (let [msg (first (:args osc-msg))
-        fn-keyword (keyword msg)
-        fns @fns]
-    (if (contains? fns fn-keyword)
-      ((fns fn-keyword))
-      (println (str "couldn't find fn " fn-keyword)))
-    nil))
-
-(osc-handle server "/fn" #'handle-fn)
-
-#_(swap! fns assoc :fn1 #(println "abacab"))
-#_(send-beat 1 :fn "fn1")
-
-
-
 
 ;;; Representing Pitch Classes
 
@@ -48,23 +14,20 @@
 
 
 ;; Rather than try to solve this with a different char or something, use keywords.
-(def pcs "pitch-class keywords" #{:0 :1 :2 :3 :4 :5 :6 :7 :8 :9 :૪ :Ɛ})
-;; TODO (annoying that :0 is not highlighted with clojure-keyword-face)
-;; https://stackoverflow.com/questions/39192226/create-a-keyword-from-a-number  - maybe not highlighting because it's in a grey area
+
 
 ;; We can order these, but to simply define them, I think it's more formal/precise to define as a set.
-(def pcs-ordered "pitch-class keywords in order" [:0 :1 :2 :3 :4 :5 :6 :7 :8 :9 :૪ :Ɛ])
+
 
 ;; This gives us the order, but it is not isomorphic to the thing we're trying to represent. :0 should technically follow :Ɛ because the shape of the pitch-class-space makes it so. We could operate on the pitch-classes indirectly via mod12 int arithmetic. To do so, we'd have to convert pc->int and then int->pc
 
-(def pc->int "returns int corresponding to pitch-class keyword"
-  (zipmap pcs-ordered (range)))
+
+
 
 #_(pc->int :Ɛ)
 #_(map pc->int pitch-class-order)
 
-(defn int->pc "returns pitch-class keyword corresponsing to int"
-  [x] (nth pcs-ordered (mod x (count pcs-ordered)) x))
+
 
 #_(map int->pc (range 24))
 
@@ -73,28 +36,16 @@
 #_(map #(int->pc (+ -5 (pc->int %))) [:0 :4 :7 :Ɛ])
 
 ;; Or we could define an infinite cycle
-(def pcs-cycle-up "a lazy cycle of pitch-classes in ascending order"
-  (cycle pcs-ordered))
+
 #_(take 36 pitch-class-cycle-up)
 
-(def pcs-cycle-dn "a lazy cycle of pitch-classes in descending order"
-  (drop 11 ; drop 11 to start on 0
-        (cycle (reverse pcs-ordered))))
+
 #_(take 36 pitch-class-cycle-dn)
 
-(defn pc-rotate "rotates x in pitch-class-space by rot"
-  [x rot]
-  (first (drop (Math/abs rot)
-               (drop-while #(not (= x %))
-                           (if  (pos? rot)
-                             pcs-cycle-up
-                             pcs-cycle-dn)))))
+
 #_(map #(pitch-class-rotate % 7) [:0 :4 :7 :Ɛ])
 #_(map #(pitch-class-rotate % -5) [:0 :4 :7 :Ɛ])
 
-; TODO: is this necessary? pretty basic map
-(defn pcs-rotate "rotates xs in pitch-class-space by rot"
-  [xs rot] (map #(pc-rotate %1 rot) xs))
 
 #_(pitch-class-rotate-all [:0 :4 :7 :Ɛ] 7)
 ;; TODO: should this be legal? seems convenient.
@@ -171,73 +122,26 @@ TODO: beat vs pulse vs tick vs meter vs measure
                             {}]))
 
 
-;;; Scheduling - TODO: break into separate ns?
 
-(defn send-beat "sends a beat of data to the max sequencer. beat is 1-based; sub-beat is 1-based subdivision of beat; type is one of :fn :note :cc; data is [note vel] or [cc val] or fn-name"
-  ([beat sub-beat type data]
-   (apply (partial osc-send client (str "/midiSeq/" (name type) "/" beat "/" sub-beat))
-          (if (= type :fn)
-            [(name data)]               ;data is a keyword referring to a fn in fns map
-            (map #(if (number? %) (int %) %) data))))
-  ([beat type data]
-   (send-beat beat 1 type data)))
-
-
-#_(send-beat 1 :fn :fn1)
-#_(send-beat 1 1 :note [60 23 64 24 67 23 71 51])
-#_(send-beat 1 :note [60 23 64 24 67 23 71 51])
-#_(send-beat 1 1 :cc [46 127])
-
-;; TODO: figure out how to send args. serialize?
-#_(send-beat 2 1 :fn ["my-fn" "arg1" 2 3])
-
-#_(doall
-   (->> [1 5 9]
-        (map #(send-beat 1 % :note [60 60]))))
-
-#_(doseq [n [1 5 9]]
-    (send-beat 1 n :note [(+ 60 n) 60]))
-
-(defn clear "clears all data in all beats"
-  [] (osc-send client "/midiSeq/clear"))
-
-#_(clear)
-#_(dir musicality.core) ;TODO  why doesn't this show anything?
 
 ;; TODO: rename
-;; TODO: pair with vel-seq, cycle vel-seq
-(defn with-vel "pairs notes with vel. if note is not a number, it is replaced with empty []. vel defaults to 64"
-  ([vel ns]
-   (map (fn [n] (if (number? n) [n vel] [])) ns))
-  ([ns] (with-vel 64 ns)))
+
+
 
 #_(with-vel 64 [0 1 2])
 #_(->> [0 1 2]
        (with-vel 64))
 
 ;; TODO: rename
-(defn chord "pairs notes with vel and flattens"
-  ([vel ns] (flatten (with-vel vel ns)))
-  ([ns] (chord 64 ns)))
+
 
 #_(chord 62 [0 1 2])
 #_(->> [60 64 67 71]
        (chord 22))
 
-; TODO: take an explicit length instead of using the final seq
-(defn merge-seqs "merges the beats of each sequence, using the last sequence's length"
-  [& seqs]
-  (reduce (fn [acc sequence]
-            (map-indexed (fn [i beat] (concat beat (nth sequence i []))) acc))
-          (last seqs)
-          (drop-last seqs)))
 
-(defn rotate-seq "rotates sequence by n"
-  [n s]
-  (map-indexed
-   (fn [i beat] (nth s
-                     (mod (+ i n) (count s))))
-   s))
+
+
 
 #_(rotate-seq 1 [0 1 2 3])
 #_(->> [0 1 2 3]
@@ -254,38 +158,16 @@ TODO: beat vs pulse vs tick vs meter vs measure
      (cycle)
      (take 10))
 
-(defn map-if-num "Applies fn to each member of coll that is a number. Leaves non-numbers unchanged."
-  [fn coll]
-  (map #(if (number? %) (fn %) %)
-       coll))
+
 
 #_(map-if-num #(+ % %) [0 1 2 :r 3 [] 4])
 #_(->> [0 3 [] :r 4 4]
        (map-if-num #(* % 2)))
 
-(def sequences (atom {}))
 
 
-;; TODO should beats have types merged or as separate sequences?
-;; TODO send sub-beats in send-beat
 
 
-(defn send-seq "sends a sequence of beats. if s is a keyword, lookup in sequences"
-  [type s]
-
-  (doseq [[beat data] (map-indexed
-                       (fn [idx data] [(+ 1 idx) data])
-                       (if (keyword? s)
-                         (@sequences s)
-                         s))]
-    (when-not (empty? data)
-      (send-beat beat 1 type data))))
-
-#_(send-beat 1 1 :note (chord 30 [60 64 67]))
-#_(send-beat 2 1 :note (chord 20 [65 69 72]))
-#_(send-seq :note (with-vel [[] [] [] [] 69 [] [] [] [] [] [] []]))
-#_(send-seq :note [[] [] [] [] [69 30] (chord 20 [72 77 80]) [] [] [] [] [] []])
-#_(clear)
 
 (comment "some new sequences 2020-07-24"
 
