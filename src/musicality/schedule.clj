@@ -2,14 +2,6 @@
   (:use [musicality.osc :as o])
   (:gen-class))
 
-(defn init "Creates/opens client and server and registers listeners" []
-  (o/connect-local)
-  #_(o/connect "192.168.1.12")
-  (o/handle "/fn" #'handle-fn))
-
-(defn deinit "Closes client and server" []
-  (o/disconnect))
-
 (defn send-beat
   "Sends a 'beat' of data to the sequencer. 
   beat is 1-based; sub-beat is 1-based subdivision of beat.
@@ -71,6 +63,18 @@
 
 (defn clear "clears all data in all beats"
   [] (o/send "/midiSeq/clear"))
+
+(defn init "Creates/opens client and server and registers listeners" 
+  ([ip]
+   (if (nil? ip)
+     (o/connect-local)
+     (o/connect ip))
+   (o/handle "/fn" #'handle-fn))
+  ([] (init nil)))
+
+(defn deinit "Closes client and server" []
+  (o/disconnect))
+
 
 (comment "usage"
 

@@ -28,15 +28,6 @@
                              pcs-cycle-up
                              pcs-cycle-dn)))))
 
-;; TODO: pair with vel-seq, cycle vel-seq
-(defn with-vel "pairs notes with vel. if note is not a number, it is replaced with empty []. vel defaults to 64"
-  ([vel ns]
-   (map-if-num (fn [n] [n vel]) ns))
-  ([ns] (with-vel 64 ns)))
-
-(defn chord "pairs notes with vel and flattens"
-  ([vel ns] (flatten (with-vel vel ns)))
-  ([ns] (chord 64 ns)))
 
 ; TODO: take an explicit length instead of using the final seq
 (defn merge-seqs "merges the beats of each sequence, using the last sequence's length"
@@ -57,6 +48,17 @@
   [fn coll]
   (map #(if (number? %) (fn %) %)
        coll))
+
+;; TODO: pair with vel-seq, cycle vel-seq
+(defn with-vel "pairs notes with vel. if note is not a number, it is replaced with empty []. vel defaults to 64"
+  ([vel ns]
+   (map-if-num (fn [n] [n vel]) ns))
+  ([ns] (with-vel 64 ns)))
+
+(defn chord "pairs notes with vel and flattens"
+  ([vel ns] (flatten (with-vel vel ns)))
+  ([ns] (chord 64 ns)))
+
 
 (defn bin->rhy "Converts a seq of 0s and 1s to a seq of notes and []s"
   [n vel bin-seq]
