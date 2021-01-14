@@ -21,21 +21,32 @@
        (map-indexed (fn [i n] (s/send-beat (+ 1 i) :note [n 64])))
        (doall)))
 
-(defn rand-pc-set [pc-count send-fn]
+
+(defn rand-pc-set
+  "returns a map containing 
+  :pc-set - record from pc-sets
+  :ints - result of applying pc-set to 
+  "
+ [pc-count send-fn n0]
   (let [pc-set (->> (p/find-pc-set pc-count "")
                     (rand-nth))]
-    (->> pc-set
-         (:prime-form)
-         (map c/pc->int)
-         (map #(+ 60 %))
-         (send-fn))
-    pc-set))
+    {:pc-set pc-set
+     :ints (->> pc-set
+                (:prime-form)
+                (map c/pc->int)
+                (map #(+ n0 %)))}))
 
-(defn play-random-chord [pc-count]
-  (rand-pc-set pc-count send-chord))
+(defn play-random-chord [pc-count n0]
+  (->> n0
+       (rand-pc-set pc-count n0)
+       (:ints)
+       (send-chord)))
 
-(defn play-random-scale [pc-count]
-  (rand-pc-set pc-count send-scale))
+(defn play-random-scale [pc-count n0]
+  (->> n0
+       (rand-pc-set pc-count send-scale)
+       (:ints)
+       (send-scale)))
 
 (defn pc? [x] (contains? c/pcs x))
 
@@ -72,18 +83,25 @@
 
 
 
+(send-prog-pc-sets-over-ints
+          (pc-set->ints 276 1 -1 (+ 4 57))
+          [[1 :maj]])
+
+
 (comment "play some random chords and scales"
          (clear)
-         (play-random-chord 4)
+         (play-random-chord 5 50)
          (play-random-chord 5)
-         (play-random-scale 5)
+         (play-random-scale 5 50)
          (play-random-scale 7)
+
+
+
+         (p/find-pc-set 4 "maj")
 
          (nth p/pc-sets  276)
 
-         (send-prog-pc-sets-over-ints
-          (pc-set->ints 276 1 -1 60)
-          [[2 :min] [5 :maj] [1 :maj]])
+         
          ; TODO: make one that uses degrees of the carrier chord-scale
          ; TODO: accept literals
 
@@ -93,4 +111,12 @@
           (pc-set->ints 276 60))
 
          (send-scale
-          (pc-set->ints 276 1 -1 60)))
+          (pc-set->ints 276 1 -1 60))
+
+
+
+;; Use this as your DJ for the weekend.
+
+
+
+)
