@@ -1828,8 +1828,14 @@
 #_(find-pc-set 3 "")
 
 (def ^:private common-sets
-{ :aug 26 :dim 23 :maj 25 :min 24
-:maj7 45 :min7 64 :dim7 67 :syrian-pent 105})
+  {:aug 26
+   :dim 23
+   :maj 25
+   :min 24
+   :maj7 45
+   :min7 64
+   :dim7 67
+   :syrian-pent 105})
 
 (defn get-pc-set "returns the prime-form of a pc-set given a keyword"
   [keyword]
@@ -1841,3 +1847,5 @@
 #_(get-pc-set :min)
 #_(get-pc-set :aug)
 #_(get-pc-set :dim)
+
+;; see examples of things to do to pc-sets  https://github.com/dn-m/Music/blob/latest/Sources/Pitch/Pitch.Class.Collection.swift

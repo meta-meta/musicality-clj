@@ -83,19 +83,25 @@
 
 
 
-(send-prog-pc-sets-over-ints
-          (pc-set->ints 276 1 -1 (+ 4 57))
-          [[1 :maj]])
+
 
 
 (comment "play some random chords and scales"
          (clear)
          (play-random-chord 5 50)
-         (play-random-chord 5)
+
          (play-random-scale 5 50)
-         (play-random-scale 7)
+         (play-random-scale 7 60)
 
 
+         ; TODO: send metadata source abstractions to scheduler
+         ; context: pc-set 276 centered at 1
+         ; seq: 1^ :maj 2^ :min 4^ :maj 5^ :maj
+         
+         
+         (send-prog-pc-sets-over-ints
+          (pc-set->ints 276 1 -1 (+ 4 57))
+          [[1 :maj] [2 :min] [4 :maj] [5 :maj]])
 
          (p/find-pc-set 4 "maj")
 
