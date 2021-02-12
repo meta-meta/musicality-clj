@@ -303,7 +303,8 @@
     :name "4-20*",
     :prime-form [:0 :1 :5 :8],
     :interval-vec "101220",
-    :description "Major-seventh Chord"}
+    :description "Major-seventh Chord"
+    :common-rotation 1}
    {:id 58,
     :name "4-21*",
     :prime-form [:0 :2 :4 :6],
@@ -337,9 +338,10 @@
    {:id 64,
     :name "4-26*",
     :prime-form [:0 :3 :5 :8],
-    :interval-vec "012120",
-
-    :description "Minor-seventh Chord"}
+    :interval-vec "012120"
+    :description "Minor-seventh Chord"
+    :common-rotation 2,
+    }
    {:id 65,
     :name "4-27",
     :prime-form [:0 :2 :5 :8],
@@ -349,7 +351,8 @@
     :name "4-27B",
     :prime-form [:0 :3 :6 :8],
     :interval-vec "012111",
-    :description "Dominant-seventh/German-sixth Chord"}
+    :description "Dominant-seventh/German-sixth Chord"
+    :common-rotation 3}
    {:id 67,
     :name "4-28*(3)",
     :prime-form [:0 :3 :6 :9],
@@ -1419,7 +1422,8 @@
     :prime-form [:0 :1 :3 :5 :6 :8 :૪],
     :interval-vec "254361",
     :description
-    "Major Diatonic Heptachord/Dominant-13th, Locrian (1221222), Phrygian (1222122), Major inverse"}
+    "Major Diatonic Heptachord/Dominant-13th, Locrian (1221222), Phrygian (1222122), Major inverse"
+    :common-rotation 1}
    {:id 277,
     :name "7-Z36..12",
     :prime-form [:0 :1 :2 :3 :5 :6 :8],
@@ -1828,24 +1832,33 @@
 #_(find-pc-set 3 "")
 
 (def ^:private common-sets
-  {:aug 26
+  {
+   :aug 26
+   :aug7 62
    :dim 23
-   :maj 25
-   :min 24
-   :maj7 45
-   :min7 64
    :dim7 67
-   :syrian-pent 105})
+   :dom7 66
+   :half-dim7 65
+   :maj 25
+   :maj7 57
+   :min 24
+   :min7 64
+   :syrian-pent 105
+   })
 
-(defn get-pc-set "returns the prime-form of a pc-set given a keyword"
-  [keyword]
-  (:prime-form (nth pc-sets
-                    (get common-sets
-                         keyword))))
+(defn get-pc-set "returns a pc-set given either the index or a keyword of common-set. returns empty map if not found."
+  [idx-or-keyword]
+  (let [idx (if (number? idx-or-keyword)
+              idx-or-keyword
+              (get common-sets idx-or-keyword))]
+    (if (nil? idx)
+      {}
+      (nth pc-sets idx))))
 
-#_(get-pc-set :maj)
+#_(get-pc-set :maj7)
 #_(get-pc-set :min)
 #_(get-pc-set :aug)
 #_(get-pc-set :dim)
+#_(get-pc-set :bogus)
 
 ;; see examples of things to do to pc-sets  https://github.com/dn-m/Music/blob/latest/Sources/Pitch/Pitch.Class.Collection.swift

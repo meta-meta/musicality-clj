@@ -37,7 +37,7 @@
           (last seqs)
           (drop-last seqs)))
 
-(defn rotate-seq "rotates sequence by n"
+(defn rotate-seq "rotates sequence by n. given n=2 and s=[a b c d e] return [c d e a b]. given n=-2 return [d e a b c]"
   [n s]
   (map-indexed
    (fn [i beat] (nth s
@@ -49,14 +49,21 @@
   (map #(if (number? %) (fn %) %)
        coll))
 
+(defn map-if-not-empty "Applies fn to each member of coll that is not empty."
+  [fn coll]
+  (map #(if (empty? %) % (fn %))
+       coll))
+
 ;; TODO: pair with vel-seq, cycle vel-seq
-(defn with-vel "pairs notes with vel. if note is not a number, it is replaced with empty []. vel defaults to 64"
-  ([vel ns]
-   (map-if-num (fn [n] [n vel]) ns))
+(defn with-vel "pairs notes with vel and dur. if note is not a number, it is left unchanged. vel defaults to 64"
+  ([dur vel ns]
+   (map-if-num (fn [n] [n vel dur]) ns))
+  ([vel ns] (with-vel :1|4 vel ns))
   ([ns] (with-vel 64 ns)))
 
-(defn chord "pairs notes with vel and flattens"
-  ([vel ns] (flatten (with-vel vel ns)))
+(defn chord "pairs notes with dur and vel and flattens. defaults to whole note (:1|1) and 64 if dur or vel are not supplied"
+  ([dur vel ns] (flatten (with-vel dur vel ns)))
+  ([vel ns] (chord :1|4 vel ns))
   ([ns] (chord 64 ns)))
 
 
@@ -66,3 +73,7 @@
        (map #(if (= 0 %) [] n))
        (with-vel vel)))
 
+(defn fill "returns a coll of length n filled with v, leaving existing values untouched"
+  ([n v coll] (take n (concat coll (repeat v))))
+  ([n v] (fill n v []))
+  ([n] (fill n [] [])))

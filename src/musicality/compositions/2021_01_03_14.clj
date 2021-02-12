@@ -7,18 +7,18 @@
 #_(s/init "192.168.1.12")
 #_(s/deinit)
 
-#_(s/send-beat 1 :note [60 64])
+#_(s/send-beat 1 :note [67 64 :1|4])
 #_(s/clear)
 
 (defn send-chord
   ([coll beat sub-beat]
-   (s/send-beat beat sub-beat :note (chord coll)))
+   (s/send-beat beat sub-beat :note (c/chord coll)))
   ([coll beat] (send-chord coll beat 1))
-  ([coll] (send-chord coll 1 1)))
+  ([coll] (send-chord coll 1)))
 
 (defn send-scale [coll]
   (->> coll
-       (map-indexed (fn [i n] (s/send-beat (+ 1 i) :note [n 64])))
+       (map-indexed (fn [i n] (s/send-beat (+ 1 i) :note [n 64 :1|4])))
        (doall)))
 
 
@@ -58,40 +58,76 @@
     (+ n (* 12 (+ 1 o)))))
 
 (defn pc-set->ints
-  ([pc-set-id rot pc-rot n0]
-   (->> (if (keyword? pc-set-id)
-          (p/get-pc-set pc-set-id)
-          (:prime-form (nth p/pc-sets pc-set-id)))
-        (c/rotate-seq rot)
-        (map #(c/pc-rotate % pc-rot))
-        (map c/pc->int)
-        (map #(+ n0 %))))
-  ([pc-set-id n0] (pc-set->ints pc-set-id 0 0 n0)))
+  "given either the index of a pc-set or a keyword of a common pc-set such as :maj, rotate the pc-set by rot.
+  if a :common-rotation exists for the pc-set, initially rotate accordingly then apply rot"
+  ([pc-set-id rot n0]
+   (let [pc-set (if (keyword? pc-set-id)
+                  (p/get-pc-set pc-set-id)
+                  (nth p/pc-sets pc-set-id))
+         {prime-form :prime-form
+          common-rotation :common-rotation} pc-set
+         rot-total (if (nil? common-rotation)
+                     rot
+                     (+ common-rotation rot))]
+
+     (->> prime-form
+          (c/rotate-seq rot-total)
+          (map #(c/pc-rotate % (* -1
+                                  (pc->int (nth prime-form (mod rot-total (count prime-form)))))))
+          (map c/pc->int)
+          (map #(+ n0 %)))))
+  ([pc-set-id n0] (pc-set->ints pc-set-id 0 n0)))
 
 
 (defn send-prog-pc-sets-over-ints
   "generates and sends a chord progression based on a carrier scale
-  of ints and seq of tuples of [root pc-set]"
+  of ints and seq of tuples of [1-based-root pc-set]"
  [carrier prog]
   (clear)
   (->> prog
-       (map (fn [[degree pc-set]]
+       (c/map-if-not-empty (fn [[degree pc-set]]
               (pc-set->ints pc-set
                             (nth carrier (- degree 1)))))
-       (map-indexed (fn [i chord]
-                      (send-chord chord (+ 1 (* 2 i)))))))
-
-
-
-
+       #_(map-indexed (fn [i chord]
+                      (when-not (empty? chord)
+                        (send-chord chord (+ 1 i)))))))
 
 
 (comment "play some random chords and scales"
+
+         (deinit)
+
+         (->>
+          (send-prog-pc-sets-over-ints
+           (pc-set->ints 276 60)
+           [[2 :min] [] [] []  [5 :maj] [] [5 :dom7] [] [1 :maj] [] [] []])
+          (map c/chord)
+          (s/send-seq :note )
+          )
+         
+         (->> (range 4)
+              (map #(pc-set->ints :min7 % 60))
+              (interpose [60])
+              (s/clear)
+
+              (c/fill 12 [])
+              (c/rotate-seq -1)
+              (map-indexed (fn [i c] (send-chord c (+ 1 i)))))
+
+         
+         (send-chord [] 2)
+         (send-chord (pc-set->ints :min7 0 60))
+
          (clear)
          (play-random-chord 5 50)
 
          (play-random-scale 5 50)
          (play-random-scale 7 60)
+
+
+         (pc-set->ints :maj7 2 60)
+
+         (p/get-pc-set :maj7)
 
 
          ; TODO: send metadata source abstractions to scheduler
