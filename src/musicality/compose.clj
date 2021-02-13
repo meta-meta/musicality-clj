@@ -99,7 +99,7 @@
                   val-or-coll
                   [val-or-coll]))
 
-
+; TODO: allow lazy-seqs for notes, vels, durs
 (defn bin->rhy "Converts a seq of 0s and 1s to seq of notes and []s. Replaces 1s with successive notes in n-or-ns, likewise for vs and ds"
   ([note-or-notes vel-or-vels dur-or-durs bin-seq]
    (let [indexed-ones (->> bin-seq (filter #(== 1)))

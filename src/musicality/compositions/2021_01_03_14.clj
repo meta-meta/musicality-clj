@@ -180,13 +180,13 @@
          (->> (c/merge-seqs 48
 
                             (->> (E 8 12)
-                                 (c/bin->rhy 4 [64 32])
+                                 (c/bin->rhy 4 [64 32] :1|64)
                                  (cycle)
                                  )
 
                             (->> (E 5 12)
                                  (rotate-seq 1)
-                                 (c/bin->rhy 1 [64 127])
+                                 (c/bin->rhy 1 [64 127] :1|64)
                                  (cycle)
                                  )
                                                        
@@ -202,6 +202,44 @@
                                  (c/bin->rhy [1 0 6] 64 :1|64)
                                )
                             )
+              
+              (clear)
+              (s/send-seq :note))
+
+
+         ; jazz beat with some randomized accents on ride and snare
+         (->> (c/merge-seqs 48
+                            [[6 64 :1|4]]
+
+                            ; kick
+                            (->> (E 4 12)
+                                 (c/bin->rhy 6 32)
+                                 cycle)
+
+                            ; hi-hat
+                            (->> (E 2 12)
+                                 (rotate-seq 3)
+                                 (c/bin->rhy 3 32)
+                                 cycle)
+
+                            ; ride
+                            (->> [1 0 0 1 0 1]
+                                 (cycle)
+                                 (take 48)
+                                 (c/bin->rhy 10 (->> (range 24) (map (fn [n] (+ 20 (rand-int 32))))))
+                                 
+                                )
+
+                            ; snare
+                            (->> (E 3 4)
+                                 (rotate-seq -2)
+                                 (cycle)
+                                 (take 48)
+                                 (c/bin->rhy 14 (->> (range 24) (map (fn [n] (rand-int 32)))))
+
+                                 )
+
+                      )
               
               (clear)
               (s/send-seq :note))
