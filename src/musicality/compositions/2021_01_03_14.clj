@@ -13,15 +13,17 @@
 
 (defn send-chord
   ([coll beat sub-beat]
-   (s/send-beat beat sub-beat :note (c/chord coll)))
+   (s/send-beat beat sub-beat :note (c/chord coll))
+   coll)
   ([coll beat] (send-chord coll beat 1))
   ([coll] (send-chord coll 1)))
+
 
 (defn send-scale [coll]
   (->> coll
        (map-indexed (fn [i n] (s/send-beat (+ 1 i) :note [n 64 :1|4])))
-       (doall)))
-
+       (doall))
+  coll)
 
 (defn rand-pc-set
   "returns a map containing 
@@ -80,12 +82,11 @@
           (map #(+ n0 %)))))
   ([pc-set-id n0] (pc-set->ints pc-set-id 0 n0)))
 
-(defn send-prog-pc-sets-over-ints
+(defn map-pc-sets-over-ints
   "generates and sends a chord progression based on a carrier scale
   of ints and seq of tuples of [1-based-root pc-set]"
  [carrier prog]
-  (clear)
-  (->> prog
+   (->> prog
        (c/map-if-not-empty (fn [[degree pc-set]]
               (pc-set->ints pc-set
                             (nth carrier (- degree 1)))))
@@ -127,26 +128,6 @@
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 (comment "play some random chords and scales"
 
          (deinit)
@@ -154,16 +135,40 @@
          ; play a scale
          (->> [0 2 4 5 7 9 11]
               (map #(+ % 60))
-              (map (fn [n] [n 64 :1|4]))
+              (map (fn [n] [n 64 :1|8]))
               (s/send-seq :note))
 
-         (->>
-          (p/find-pc-set 4 "fourth")
-          #_(map #(:description %))
-          (rand-nth)
-          (fn [pc-set]
-            #_(send-chord (pc-set->ints (:id pc-set) 0 60))
-            (:description pc-set)))
+         (clear)
+
+
+         ; Change a cc over duration
+         (send-beat 2 :cc [12 127 :1|8])
+         (send-beat 7 :cc [12 0 :1|2])
+          
+
+         ; Change all the CCs over duration
+         (->> (range 128)
+              (map (fn [x] [x 127 :1|4]))
+              (flatten)
+              (send-beat 1 :cc))
+          
+         (->> (range 128)
+              (map (fn [x] [x 0 :1|4]))
+              (flatten)
+              (send-beat 6 :cc))
+
+         (clear)
+
+         
+
+         ; play a random chord with 4 notes with description including "fourth"
+         (->> (p/find-pc-set 4 "fourth")
+              (rand-nth)
+              ((fn [pc-set]
+                 (send-chord (pc-set->ints (:id pc-set) 0 60))
+                 [(:id pc-set) (:description pc-set)])))
+
+         
 
          (play-random-chord 4 60)
 
@@ -206,6 +211,75 @@
               (clear)
               (s/send-seq :note))
 
+         ; nice hand-pan and beat
+         (->> (c/merge-seqs 48
+
+                            ; bembe
+                            (->> (E 7 12)
+                                 (rotate-seq 5)
+                                 (c/bin->rhy (pc-set->ints 60 60)
+                                             [64 32]
+                                             :1|64)
+                                 (cycle)
+                                 )
+
+                            ; bembe 2
+                            (->> (E 7 12)
+                                 (rotate-seq 6)
+                                 (c/bin->rhy (pc-set->ints 60 48)
+                                             [64 32]
+                                             :1|64)
+                                 (cycle)
+                                 )
+
+                             ; kick
+                            (->> (E 4 12)
+                                 (c/bin->rhy 6 32)
+                                 (cycle))
+
+                            ; hi-hat
+                            (->> (E 2 12)
+                                 (rotate-seq 3)
+                                 (c/bin->rhy 3 32)
+                                 (cycle))
+
+                                                        
+                                        
+                            (->> (E 3 12)
+                                 (repeat 7)
+                                 (map-indexed (fn [i s]
+                                                (->> s
+                                                     (c/rotate-seq (* 3 i))
+                                                     (c/bin->rhy (->> (+ 60 (* 12 (mod i 3)))
+                                                                      (pc-set->ints 60)
+                                                                      (reverse))
+                                                                 45
+                                                                 :1|64))))
+                                 (c/fill 48 [])
+                                 (c/rotate-seq 0)
+                                 )
+
+                             (->> (E 5 12)
+                                 (repeat 7)
+                                 (map-indexed (fn [i s]
+                                                (->> s
+                                                     (c/rotate-seq (* -1 i))
+                                                     (c/bin->rhy (->> (+ 60 (* 12 (mod i 3)))
+                                                                      (pc-set->ints 61)
+                                                                      #_(reverse))
+                                                                 45
+                                                                 :1|64))))
+                                 (c/fill 48 [])
+                                 (c/rotate-seq 12)
+                                 )
+                            
+                            )
+              
+              (clear)
+              (s/send-seq :note))
+
+         (s/send-beat 1 :context (pc-set->ints 60 0))
+
 
          ; jazz beat with some randomized accents on ride and snare
          (->> (c/merge-seqs 48
@@ -214,43 +288,44 @@
                             ; kick
                             (->> (E 4 12)
                                  (c/bin->rhy 6 32)
-                                 cycle)
+                                 (cycle))
 
                             ; hi-hat
                             (->> (E 2 12)
                                  (rotate-seq 3)
                                  (c/bin->rhy 3 32)
-                                 cycle)
+                                 (cycle))
 
                             ; ride
                             (->> [1 0 0 1 0 1]
                                  (cycle)
                                  (take 48)
-                                 (c/bin->rhy 10 (->> (range 24) (map (fn [n] (+ 20 (rand-int 32))))))
-                                 
-                                )
+                                 (c/bin->rhy 10 (->> (range 24) (map (fn [n] (+ 20 (rand-int 32)))))))
 
                             ; snare
                             (->> (E 3 4)
-                                 (rotate-seq -2)
+                                 (rotate-seq 2)
                                  (cycle)
                                  (take 48)
-                                 (c/bin->rhy 14 (->> (range 24) (map (fn [n] (rand-int 32)))))
+                                 (c/bin->rhy 14 (->> (range 24) (map (fn [n] (+ 10 (rand-int 26)))))))
 
-                                 )
+                            ; chord progression
+                            (->> [[2 :min] [] [] []  [5 :maj] [] [5 :dom7] [] [1 :maj] [] [] []]
+                             (map-pc-sets-over-ints (pc-set->ints 276 60))
+                             (map c/chord))
 
                       )
               
-              (clear)
+              (s/clear)
               (s/send-seq :note))
 
 
-         (->>
-          (send-prog-pc-sets-over-ints
-           (pc-set->ints 276 60)
-           [[2 :min] [] [] []  [5 :maj] [] [5 :dom7] [] [1 :maj] [] [] []])
-          (map c/chord)
-          (s/send-seq :note))
+         (->> [[2 :min] [] [] []
+               [5 :maj] [] [5 :dom7] []
+               [1 :maj] [] [] []]
+              (send-prog-pc-sets-over-ints (pc-set->ints 276 60))
+              (map c/chord)
+              (s/send-seq :note))
 
          (->> (range 4)
               (map #(pc-set->ints :min7 % 60))
@@ -280,8 +355,8 @@
          ; seq: 1^ :maj 2^ :min 4^ :maj 5^ :maj
 
 
-         (send-prog-pc-sets-over-ints
-          (pc-set->ints 276 1 -1 (+ 4 57))
+         (map-pc-sets-over-ints
+          (pc-set->ints 276 (+ 4 57))
           [[1 :maj] [2 :min] [4 :maj] [5 :maj]])
 
          (p/find-pc-set 4 "maj")
@@ -299,7 +374,7 @@
           (pc-set->ints 276 60))
 
          (send-scale
-          (pc-set->ints 276 1 -1 60))
+          (concat (pc-set->ints 276 1 60) [72]))
 
 
 

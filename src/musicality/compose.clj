@@ -29,6 +29,11 @@
                              pcs-cycle-dn)))))
 
 
+(defn fill "returns a coll of length n filled with v, leaving existing values untouched"
+  ([n v coll] (take n (concat coll (repeat v))))
+  ([n v] (fill n v []))
+  ([n] (fill n [] [])))
+
 
 (defn merge-seqs "merges the beats and sub-beats of each sequence, using the length of the longest sequence or max-len.
   seqs can be lazy/infinite but sub-beats cannot (yet?)"
@@ -72,7 +77,7 @@
   (map #(if (number? %) (fn %) %)
        coll))
 
-(defn map-if-num "Applies fn to each member of coll that == 1"
+(defn map-if-one "Applies fn to each member of coll that == 1"
   [fn coll]
   (map #(if (== 1 %) (fn %) %)
        coll))
@@ -93,6 +98,7 @@
   ([dur vel ns] (flatten (with-vel dur vel ns)))
   ([vel ns] (chord :1|4 vel ns))
   ([ns] (chord 64 ns)))
+
 
 (defn as-coll "returns val-or-coll if coll, or [val-or-coll] if not"
   [val-or-coll] (if (coll? val-or-coll)
@@ -121,7 +127,4 @@
 
 #_(bin->rhy [6 9] 32 :1|2 [0 0 1 0 1 0 1 1 1 0])
 
-(defn fill "returns a coll of length n filled with v, leaving existing values untouched"
-  ([n v coll] (take n (concat coll (repeat v))))
-  ([n v] (fill n v []))
-  ([n] (fill n [] [])))
+
