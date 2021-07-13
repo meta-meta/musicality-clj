@@ -26,7 +26,7 @@
 (defn rand-pc-set
   "returns a map containing 
   :pc-set - record from pc-sets
-  :ints - result of applying pc-set to 
+  :ints - result of applying pc-set to n0
   "
   [pc-count n0]
   (let [pc-set (->> (p/find-pc-set pc-count "")
@@ -78,16 +78,13 @@
   ([pc-set-id n0] (pc-set->ints pc-set-id 0 n0)))
 
 (defn map-pc-sets-over-ints
-  "generates and sends a chord progression based on a carrier scale
+  "generates a chord progression based on a carrier scale
   of ints and seq of tuples of [1-based-root pc-set]"
   [carrier prog]
   (->> prog
        (c/map-if-not-empty (fn [[degree pc-set]]
                              (pc-set->ints pc-set
-                                           (nth carrier (- degree 1)))))
-       #_(map-indexed (fn [i chord]
-                        (when-not (empty? chord)
-                          (send-chord chord (+ 1 i)))))))
+                                           (nth carrier (- degree 1)))))))
 
 
 
@@ -120,6 +117,107 @@
   [k n]
   (let [seed (concat (repeat k [1]) (repeat (- n k) [0]))]
     (flatten (apply recombine seed))))
+
+
+
+ ; nice hand-pan and beat
+#_(let [pc-set 60
+      pc-set-vec [1 3 6 7 10 11]
+      root 1]
+  (->> (c/merge-seqs 32
+
+                                        ; bembe
+                     (->> (E 7 16)
+                          (rotate-seq 5)
+                          (c/bin->rhy (pc-set->ints pc-set (to-octave root 2))
+                                      [12 32]
+                                      :1|4)
+                          (shuffle)
+                          (cycle))
+
+                                        ; bembe 2
+                    (->> (E 7 16)
+                          (rotate-seq 7)
+                          (c/bin->rhy (->> pc-set-vec
+                                           (map #(to-octave % 5))
+                                           (shuffle))
+                                      [40 32 24]
+                                      [:1|8 :1|16 :1|32])
+                          (cycle))
+
+                    (->> (E 13 16)
+                          (rotate-seq 7)
+                          (c/bin->rhy (->> pc-set-vec
+                                           (map #(to-octave % 4))
+                                           (shuffle))
+                                      [40 32 24]
+                                      [:1|8 :1|16 :1|32])
+                          (cycle))
+
+                                        ; kick
+                     (->> (E 7 16)
+                          (c/bin->rhy 6 12)
+                          (cycle))
+
+                                        ; hi-hat
+                     (->> (E 6 16)
+                          (rotate-seq 2)
+                          (c/bin->rhy 10 30)
+                         #_ (map-indexed (fn [i s]
+                                         (->> s
+                                              (c/rotate-seq (* 3 i))
+                                              (c/bin->rhy 13
+                                                          45
+                                                          :1|64))))
+                          (cycle))
+
+                     ; fast hats
+                      (->> (E 7 12)
+                          (repeat 7)
+                          (map-indexed (fn [i s]
+                                         (->> s
+                                             #_ (c/rotate-seq (* 4 i))
+                                              #_(shuffle)
+                                              (c/bin->rhy 10
+                                                          [10 5 10 10]
+                                                          :1|64))))
+                          (shuffle)
+                          (c/fill 32 [])
+                          (c/rotate-seq 1))
+
+                    #_ (->> (E 3 12)
+                          (repeat 7)
+                          (map-indexed (fn [i s]
+                                         (->> s
+                                              (c/rotate-seq (* 3 i))
+                                              (c/bin->rhy (->> (+ (to-octave root 4) (* 12 (mod i 3)))
+                                                               (pc-set->ints pc-set)
+                                                               (reverse))
+                                                          45
+                                                          :1|64))))
+                          (c/fill 48 [])
+                          (c/rotate-seq 0))
+
+                    #_ (->> (E 2 12)
+                          (repeat 14)
+                          (map-indexed (fn [i s]
+                                         (->> s
+                                              (c/rotate-seq (* 4 i))
+                                              #_(shuffle)
+                                              (c/bin->rhy (->> (+ (to-octave root 3) (* 12 (mod i 3)))
+                                                               (pc-set->ints pc-set)
+                                                               (reverse))
+                                                          
+                                                          :1|64))))
+                          (shuffle)
+                          (c/fill 32 [])
+                          (c/rotate-seq 1)))
+
+       (clear)
+       (s/send-seq :note)))
+
+
+
 
 (comment "play some random chords and scales"
 
@@ -208,68 +306,7 @@
               (clear)
               (s/send-seq :note))
 
-         ; nice hand-pan and beat
-         (->> (c/merge-seqs 48
-
-                            ; bembe
-                            (->> (E 7 12)
-                                 (rotate-seq 5)
-                                 (c/bin->rhy (pc-set->ints 60 60)
-                                             [64 32]
-                                             :1|64)
-                                 (cycle))
-
-                            ; bembe 2
-
-
-                            (->> (E 7 12)
-                                 (rotate-seq 6)
-                                 (c/bin->rhy (pc-set->ints 60 48)
-                                             [64 32]
-                                             :1|64)
-                                 (cycle))
-
-                             ; kick
-
-
-                            (->> (E 4 12)
-                                 (c/bin->rhy 6 32)
-                                 (cycle))
-
-                            ; hi-hat
-                            (->> (E 2 12)
-                                 (rotate-seq 3)
-                                 (c/bin->rhy 3 32)
-                                 (cycle))
-
-                            (->> (E 3 12)
-                                 (repeat 7)
-                                 (map-indexed (fn [i s]
-                                                (->> s
-                                                     (c/rotate-seq (* 3 i))
-                                                     (c/bin->rhy (->> (+ 60 (* 12 (mod i 3)))
-                                                                      (pc-set->ints 60)
-                                                                      (reverse))
-                                                                 45
-                                                                 :1|64))))
-                                 (c/fill 48 [])
-                                 (c/rotate-seq 0))
-
-                            (->> (E 5 12)
-                                 (repeat 7)
-                                 (map-indexed (fn [i s]
-                                                (->> s
-                                                     (c/rotate-seq (* -1 i))
-                                                     (c/bin->rhy (->> (+ 60 (* 12 (mod i 3)))
-                                                                      (pc-set->ints 61)
-                                                                      #_(reverse))
-                                                                 45
-                                                                 :1|64))))
-                                 (c/fill 48 [])
-                                 (c/rotate-seq 12)))
-
-              (clear)
-              (s/send-seq :note))
+        
 
          (s/send-beat 1 :context (pc-set->ints 60 0))
 
