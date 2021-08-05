@@ -55,7 +55,10 @@
   (ratio->JI-interval
    (/ (:data (parse-keyword a)) (:data (parse-keyword b)))) )
 
-#_(-JI-interval :3:2 :9:8)
+ #_(-JI-interval :3:2 :9:8)
+ #_(-JI-interval :5:4 :11:8)
+
+#_(+JI-interval :11:10 :5:4)
 
 (defn complement-JI-interval [a]
   (-JI-interval :2:1 a))
