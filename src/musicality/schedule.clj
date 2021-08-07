@@ -2,6 +2,7 @@
   (:use [musicality.osc :as o])
   (:gen-class))
 
+
 (def dur->max-note-val 
   "a map of duration keyword to Max note value. It would be nice to use ratios but I want this to work in cljs.
   :1|2 I find more readable than :1:2"
@@ -39,30 +40,27 @@
    
 })
 
+
 (defn send-beat
   "Sends a 'beat' of data to the sequencer. 
-  beat is 1-based; sub-beat is 1-based subdivision of beat.
-  The number of sub-beats is determined by timesig:
-  when beats are 8th notes, there are 12 sub-beats. quarter notes have 24 sub-beats.
+  beat is 1-based.  
   type can be :note :cc :fn.
 
   type -> data
   :note -> [note vel dur]
   :cc -> [cc target-val dur]
   :fn -> fn-name"
-  ([beat sub-beat type data]
-   (let [addr (str "/midiSeq/" (name type) "/" beat "/" sub-beat)
-         msg (if (= type :fn)
-               [(name data)]
-               (map
-                #(cond
-                   (number? %) (int %)
-                   (keyword? %) (dur->max-note-val %)
-                   :else %)
-                data))]
-     (apply o/send addr msg)))
-  ([beat type data]
-   (send-beat beat 1 type data)))
+  [beat type data]
+  (let [addr (str "/midiSeq/" (name type) "/" beat)
+        msg (if (= type :fn)
+              [(name data)]
+              (map
+               #(cond
+                  (number? %) (int %)
+                  (keyword? %) (dur->max-note-val %)
+                  :else %)
+               data))]
+    (apply o/send addr msg)))
 
 
 (def ^:private fns "A map of fn keywords to definitions." (atom {}))
