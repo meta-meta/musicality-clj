@@ -120,10 +120,7 @@
                    :spacer-ring-thickness 0.5)
         (output))
 
-#_(->> (-> (cube 2 2 2)
-           (difference (sphere 1.5)))
-       (with-fn 100)
-       (output))
+
 
 (defn hub-outer [& {:keys [clockface-thickness
                            sphere-radius
@@ -504,5 +501,5 @@
         :scale-degree-radius 17
         :sphere-radius 1.25)
  (translate [0 0 -1])
- (union (mu-major))
+#_ (union (mu-major))
  (output))
