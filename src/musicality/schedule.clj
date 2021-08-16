@@ -43,13 +43,14 @@
 
 (defn send-beat-count
   "Sends the number of pulses in a loop"
-  [pulse-count]
-  (o/send "/midiSeq/pulseCount" (int pulse-count)))
+  [instr pulse-count]
+  (o/send (str "/" instr "/pulseCount") (int pulse-count)))
 
 #_(send-beat-count 420)
 
 (defn send-beat
   "Sends a 'beat' of data to the sequencer. 
+  instr is a string corresponding to osc address of instrument
   beat is 1-based.  
   type can be :note :cc :fn.
 
@@ -58,8 +59,8 @@
   :cc -> [cc target-val dur]
   :context -> [note note note ...] or \"clear\" (TODO: this will get richer)
   :fn -> fn-name"
-  [beat type data]
-  (let [addr (str "/midiSeq/" (name type) "/" beat)
+  [instr beat type data]
+  (let [addr (str "/" instr "/" (name type) "/" beat)
         msg (if (= type :fn)
               [(name data)] ; fn-name
               (map
@@ -87,36 +88,40 @@
 
 (defn send-fn
   "Sends a fn to be executed at beat"
-  [beat fn-keyword fn]
+  [instr beat fn-keyword fn]
   (swap! fns assoc fn-keyword fn)
-  (send-beat beat :fn fn-keyword))
+  (send-beat instr beat :fn fn-keyword))
 
 
 (defn send-beats "Sends a hash-map of beats.
   Each beat is a map that can contain :note :cc :fn :context data.
   So s might look like {1 {:note [60 64 :1|4, 65 64 :1|4]}, 4 {:fn :some-fn #()}}"
-  [beats]
+  [instr beats]
   (doseq [[beat mixed-data] beats]
     #_(prn beat mixed-data)
     (doseq [[type data] mixed-data]
-      (prn beat type data)
+      (prn instr beat type data)
       (if (= :fn type)
-        (apply send-fn beat data)
-        (send-beat beat type data)))))
+        (apply send-fn instr beat data)
+        (send-beat instr beat type data)))))
 
 
 
-#_(clear)
-#_(send-beats {1 {:note [60 127 :1|1 66 64 :1|1] :fn [:my-fn #(+ 1 1)]}
-             4 {:context [0 2 4 6 8 10]}
-             100 {:context ["clear"]
-                 :note [65 64 :1|2]}})
+#_(clear "pianoteq")
+#_(send-beat-count "pianoteq" 420)
+#_(send-beats "pianoteq"
+              {1 {:note [60 32 :1|1 66 44 :1|1] :fn [:my-fn #(+ 1 1)]}
+               4 {:context [0 2 4 6 8 10]}
+               100 {:context ["clear"]
+                    :note [65 64 :1|2]}})
+
+#_(send-beats "drums"
+              {1 {:note [0 64 :1|1]}})
 
 
 
 (defn clear "clears all data in all beats. passes through a single argument for convenience"
-  ([] (o/send "/midiSeq/clear"))
-  ([anything] (clear) anything))
+  [instr] (o/send (str "/" instr "/clear")))
 
 (defn init "Creates/opens client and server and registers listeners" 
   ([ip]
@@ -136,7 +141,8 @@
          (init)
          (deinit)
 
-         (clear)
+         (clear "drums")
+         (clear "pianoteq")
 
          ; fns are stored in an atom.
          @fns
