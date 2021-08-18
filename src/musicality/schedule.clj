@@ -63,15 +63,15 @@
   (let [addr (str "/" instr "/" (name type) "/" beat)
         msg (if (= type :fn)
               [(name data)] ; fn-name
-              (map
-               #(cond
-                  (number? %) (int %)
-                  (keyword? %) (dur->max-note-val %)
-                  :else %)
-               data))]
+              (->> data
+                   (vec) ; data might be a #{}
+                   (flatten)
+                   (map #(cond
+                           (number? %) (int %)
+                           (keyword? %) (dur->max-note-val %)
+                           :else %)
+                        )))]
     (apply o/send addr msg)))
-
-
 
 
 (def ^:private fns "A map of fn keywords to definitions." (atom {}))
@@ -110,13 +110,14 @@
 #_(clear "pianoteq")
 #_(send-beat-count "pianoteq" 420)
 #_(send-beats "pianoteq"
-              {1 {:note [60 32 :1|1 66 44 :1|1] :fn [:my-fn #(+ 1 1)]}
+              {1 {:note #{[60 32 :1|1] [66 44 :1|1]} :fn [:my-fn #(+ 1 1)]}
                4 {:context [0 2 4 6 8 10]}
                100 {:context ["clear"]
-                    :note [65 64 :1|2]}})
+                    :note #{[65 64 :1|2]}}})
 
+#_(clear "drums")
 #_(send-beats "drums"
-              {1 {:note [0 64 :1|1]}})
+              {1 {:note #{[0 64 :1|1]}}})
 
 
 

@@ -173,13 +173,19 @@
 #_(euclid 7 12)
 #_(euclid 7 12 3)
 
-(defn expand-rhy [mult rhy]
+(defn expand [mult rhy]
   (as-> rhy v
     (interleave v (repeat (count rhy) (repeat (- mult 1) .)))
     (flatten v)))
 
-#_(expand-rhy 3 [x x x . x])
-(count (expand-rhy 7 [1 1 1]))
+(defn repeat [reps x] "repeat x reps times and flatten"
+  (->> x
+       (clojure.core/repeat reps)
+       (flatten)))
+
+
+#_(expand 3 [x x x . x])
+(count (expand 7 [1 1 1]))
 
 (comment ""
          (musicality.schedule/clear "drums")
@@ -195,7 +201,7 @@
                                               (repeat 2)
                                               (flatten)
 
-                                             (expand-rhy 4)
+                                             (expand 4)
 
                                              (bin->rhy 12)
                                               
@@ -213,13 +219,11 @@
                                               (repeat 4)
                                               (flatten)
 
-                                              (expand-rhy 4)
+                                              (expand 4)
 
                                               (bin->rhy [30 32 34 36 38 39 40 41 43 45 46 49 51])
                                               
-                                              (map-indexed (fn [i note] (if (empty? note)
-                                                                          nil
-                                                                          [(+ 1 i) {:note note}])))
+                                              (map-index)
                                               (filter identity)
                                               (into {})))
 
