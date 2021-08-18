@@ -85,21 +85,43 @@
 
 
 
+
+(def cr78 {
+           :bongo-hi 0
+           :bongo-lo 1
+           :hihat-closed-1 2
+           :hihat-closed-2 3
+           :conga-1 4
+           :conga-2 5
+           :kick-lo 6
+           :kick-hi 7
+           :hihat-open-1 8
+           :hihat-open-2 9
+           :hihat-open-3 10
+           :perc-1 11
+           :perc-2 12
+           :snare-rim 13
+           :snare-1 14
+           :snare-2 15
+})
+
+
 ; Two Hearts
 (set-len 6)
 (->> (lcm-meter-with-opts
-      [x .] :expand [6 70]
-      [. x] :expand [[14 15] [20 30]]
-      [x . x] :repeat [3 [60 20]])
+      [x . x] :repeat [(:hihat-closed-2 cr78) [60 20]]
+      [x .] :expand [(:kick-lo cr78) 70]
+      [. x] :expand [[(:snare-1 cr78) (:snare-2 cr78)] [20 30]]
+     )
      (send-beats))
 
 ; Purdy Shuffle
 (set-len 12)
 (->> (lcm-meter-with-opts
-      [x . x] :repeat [3 [60 10]]
-      [. x .] :repeat [14 10]
-      [. . . . . . x . . . . .] :expand [15 70]
-      [x . . . . x . . . . . x] :expand [6 70]
+      [x . x] :repeat [(:hihat-closed-2 cr78) [60 10]]
+      [. x .] :repeat [(:snare-1 cr78) 10]
+      [. . . . . . x . . . . .] :expand [(:snare-2 cr78) 70]
+      [x . . . . x . . . . . x] :expand [(:kick-lo cr78) 70]
       )
      (send-beats))
 
@@ -107,19 +129,19 @@
 ; Jazz practice 3:4
 (set-len 12)
 (->> (lcm-meter-with-opts
-      [x . . x . x] :repeat [10 70]
-      [x x x x] :expand [6 70]
-      [x x x .] :repeat [14 [10 10 10]])
+      [x . . x . x] :repeat [(:hihat-open-3  cr78) 70]
+      [x x x x] :expand [(:kick-lo cr78) 70]
+      [x x x .] :repeat [(:snare-1 cr78) [10 10 10]])
      (send-beats))
 
 
 ; Bembe practice 3:4
 (set-len 12)
 (->> (lcm-meter-with-opts
-      (c/rotate-seq 0 [x . x . x x . x . x . x]) :repeat [1 50]
-      [. x . x] :expand [3 50]
-      [x x x x] :expand [6 90]
-      [x x x .] :repeat [14 [10 10 10]]
+      (c/rotate-seq 0 [x . x . x x . x . x . x]) :repeat [(:bongo-lo cr78) 50]
+      [. x . x] :expand [(:hihat-closed-2 cr78) 50]
+      [x x x x] :expand [(:kick-lo cr78) 90]
+      [x x x .] :repeat [(:snare-1 cr78) [10 10 10]]
       )
      (send-beats))
 
