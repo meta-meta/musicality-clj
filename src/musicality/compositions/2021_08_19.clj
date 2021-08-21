@@ -5,49 +5,49 @@
 )
 
 
-(s/def :mu/note-num (s/and int?
+(s/def ::note-num (s/and int?
                        #(>= % 0)
                        #(<= % 127)))
 
-#_(s/valid? :mu/note 64)
+#_(s/valid? ::note 64)
 
-(s/def :mu/dur (into #{} (keys dur->max-note-val)))
+(s/def ::dur (into #{} (keys dur->max-note-val)))
 
-_#(s/valid? :mu/dur :1|2)
+#_(s/valid? ::dur :1|2)
 
-(s/def :mu/midi-note
+(s/def ::midi-note
   (s/cat :note int?
          :vel int?
          :dur :mu/dur))
 
-#_(s/conform :mu/midi-note [127 0 :1|2])
+#_(s/conform ::midi-note [127 0 :1|2])
 
-(s/def :mu/cc (s/coll-of int?)) ;TODO
-(s/def :mu/context (s/map-of [] []))
-(s/def :mu/fn (s/coll-of keyword?))
-(s/def :mu/note (s/and set?
-                       (s/coll-of :mu/midi-note)))
+(s/def ::cc (s/coll-of int?)) ;TODO
+(s/def ::context (s/map-of [] []))
+(s/def ::fn (s/coll-of keyword?))
+(s/def ::note (s/and set?
+                       (s/coll-of ::midi-note)))
 
-#_(s/conform :mu/note #{[54 46 :1|2] [60 10 :1|1]})
-
-
-(s/def :mu/beat 
-  (s/keys :opt [:mu/cc
-                :mu/context
-                :mu/fn
-                :mu/note]))
-
-#_(s/conform :mu/beat {:mu/note #{[60 12 :1|1] [64 30 :1|2]}
-                       :mu/fn #{:fn-name}})
-
-(s/def :mu/sequence (s/map-of int? :mu/beat))
-
-#_(s/conform :mu/sequence
-           {1 {:mu/note #{[64 32 :1|1]}}
-            69 {:mu/fn #{:do-it :go-go-go}}})
+#_(s/conform ::note #{[54 46 :1|2] [60 10 :1|1]})
 
 
-(s/valid? :mu/sequence {1 {:note 123}})
+(s/def ::beat 
+  (s/keys :opt-un [::cc
+                   ::context
+                   ::fn
+                   ::note]))
+
+#_(s/conform ::beat {:note #{[60 12 :1|1] [64 30 :1|2]}
+                       :fn #{:some-func :some-other-func}})
+
+(s/def ::sequence (s/map-of int? ::beat))
+
+#_(s/conform ::sequence
+           {1 {:note #{[64 32 :1|1]}}
+            420 {:fn #{:do-it :go-go-go}}})
+
+
+#_(s/valid? ::sequence {1 {:note 123}})
 
 (defn get-bpm
   "returns the bpm to set in DAW to obtain a tatum-count that will equally map to a bpm-target and seq-beat-cnt target"
@@ -56,7 +56,7 @@ _#(s/valid? :mu/dur :1|2)
         mb-cnt (* seq-beat-cnt mbpb)]
     (float (* bpm-target (/ tatum-cnt mb-cnt)))))
 
-#_(get-bpm 48 120 (* 12 420)) 12-bar blues as 12 bars of 420 tatums
+#_(get-bpm 48 120 (* 12 420)) ; 12-bar blues as 12 bars of 420 tatums
 #_(get-bpm 4 120 420)
 
 (comment "TODO
