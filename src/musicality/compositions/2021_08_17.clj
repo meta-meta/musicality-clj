@@ -82,12 +82,7 @@
                         (into {})
                         (merge-notes beats))) {}))))
 
-
-
-
-
-(def cr78 {
-           :bongo-hi 0
+(def cr78 {:bongo-hi 0
            :bongo-lo 1
            :hihat-closed-1 2
            :hihat-closed-2 3
@@ -102,60 +97,81 @@
            :perc-2 12
            :snare-rim 13
            :snare-1 14
-           :snare-2 15
-})
+           :snare-2 15})
+
+(comment "condensed beats"
+
+         (s/init)
+         (set-len 6)
+         (->> (lcm-meter-with-opts
+               [x . x] :repeat [(:hihat-closed-2 cr78) [60 20]]
+               [x .] :expand [(:kick-lo cr78) 70]
+               [. x] :expand [[(:snare-1 cr78) (:snare-2 cr78)] [20 30]])
+              (send-beats))
 
 
-; Two Hearts
-(set-len 6)
-(->> (lcm-meter-with-opts
-      [x . x] :repeat [(:hihat-closed-2 cr78) [60 20]]
-      [x .] :expand [(:kick-lo cr78) 70]
-      [. x] :expand [[(:snare-1 cr78) (:snare-2 cr78)] [20 30]]
-     )
-     (send-beats))
 
-; Purdy Shuffle
-(set-len 12)
-(->> (lcm-meter-with-opts
-      [x . x] :repeat [(:hihat-closed-2 cr78) [60 10]]
-      [. x .] :repeat [(:snare-1 cr78) 10]
-      [. . . . . . x . . . . .] :expand [(:snare-2 cr78) 70]
-      [x . . . . x . . . . . x] :expand [(:kick-lo cr78) 70]
-      )
-     (send-beats))
+         
+                                        ; Two Hearts
+         (set-len 6)
+         (->> (lcm-meter-with-opts
+               [x . x] :repeat [(:hihat-closed-2 cr78) [60 20]]
+               [x .] :expand [(:kick-lo cr78) 70]
+               [. x] :expand [[(:snare-1 cr78) (:snare-2 cr78)] [20 30]])
+              (send-beats))
 
-
-; Jazz practice 3:4
-(set-len 12)
-(->> (lcm-meter-with-opts
-      [x . . x . x] :repeat [(:hihat-open-3  cr78) 70]
-      [x x x x] :expand [(:kick-lo cr78) 70]
-      [x x x .] :repeat [(:snare-1 cr78) [10 10 10]])
-     (send-beats))
+                                        ; Purdy Shuffle
+         (set-len 12)
+         (->> (lcm-meter-with-opts
+               [x . x] :repeat [(:hihat-closed-2 cr78) [60 10]]
+               [. x .] :repeat [(:snare-1 cr78) 10]
+               [. . . . . . x . . . . .] :expand [(:snare-2 cr78) 70]
+               [x . . . . x . . . . . x] :expand [(:kick-lo cr78) 70])
+              (send-beats))
 
 
-; Bembe practice 3:4
-(set-len 12)
-(->> (lcm-meter-with-opts
-      (c/rotate-seq 0 [x . x . x x . x . x . x]) :repeat [(:bongo-lo cr78) 50]
-      [. x . x] :expand [(:hihat-closed-2 cr78) 50]
-      [x x x x] :expand [(:kick-lo cr78) 90]
-      [x x x .] :repeat [(:snare-1 cr78) [10 10 10]]
-      )
-     (send-beats))
+                                        ; Jazz practice 3:4
 
 
-; 12:7:5
-(clear)
-(set-len 60)
-(->> (lcm-meter-with-opts
-      [x . x . x x . x . x . x] :repeat [0 50]
-      [x . x . x . x] :repeat [1 50]
-      [x . x . x] :repeat [3 40]
-      )
-     (send-beats))
+         (set-len 12)
+         (->> (lcm-meter-with-opts
+               [x . . x . x] :repeat [(:hihat-open-3  cr78) 70]
+               [x x x x] :expand [(:kick-lo cr78) 70]
+               [x x x .] :repeat [(:snare-1 cr78) [10 10 10]])
+              (send-beats))
 
+
+                                        ; Bembe practice 3:4
+
+
+         (set-len 12)
+         (->> (lcm-meter-with-opts
+               (c/rotate-seq 1 [x . x . x x . x . x . x]) :repeat [(:bongo-lo cr78) 50]
+               [. x . x] :expand [(:hihat-closed-2 cr78) 50]
+               [x x x x] :expand [(:kick-lo cr78) 50]
+               [x x x .] :repeat [(:snare-1 cr78) [10 10 10]])
+              (send-beats))
+
+
+                                        ; 12:7:5
+
+
+         (s/clear "pianoteq")
+         (s/send-beat-count "pianoteq" 420)
+         (->> (lcm-meter-with-opts
+               [x . x . x x . x . x . x] :repeat [[60 67 45 48 45 45] [50 70 40 40 30 30 30]]
+               [x . x . x . x] :repeat [[64 76 64 79] [10 50 30 70 20]]
+               [x . x . x] :expand [[69 98] [40 10 90 10 30]]
+
+               [x . x . . .] :repeat [[90 95 93] [20 5]]
+               [. x .] :repeat [[88] 10]
+               [. . . . . . x . . . . .] :expand [[55] 70]
+               [x . . . . x . . . . . x] :expand [[33] 70]
+               )
+
+              (s/send-beats "pianoteq"))
+
+)
 
 
 (comment "long-hand merging beats individually"
@@ -192,8 +208,6 @@
               (swap! beats merge-notes)
               (s/send-beats "drums"))
 
-         (clear)
-
-)
+         (clear))
 
 #_(s/deinit)
