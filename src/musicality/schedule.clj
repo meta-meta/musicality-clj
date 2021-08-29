@@ -60,9 +60,19 @@
   :context -> [note note note ...] or \"clear\" (TODO: this will get richer)
   :fn -> fn-name"
   [instr beat type data]
-  (let [addr (str "/" instr "/" (name type) "/" beat)
-        msg (if (= type :fn)
+  (let [addr (if (= type :cc)
+               (str "/" instr "/" (name type) "/" beat "/" (first data))
+               (str "/" instr "/" (name type) "/" beat))
+        msg (cond 
+              (= type :fn)
               [(name data)] ; fn-name
+
+              (= type :cc)
+              (->> data
+                   (rest)
+                   (map float))
+
+              :else
               (->> data
                    (vec) ; data might be a #{}
                    (flatten)
