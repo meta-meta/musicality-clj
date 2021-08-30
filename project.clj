@@ -10,4 +10,5 @@
   :main ^:skip-aot musicality.core
   :target-path "target/%s"
   :plugins [[lein-codox "0.10.7"]]
+  :codox {:namespaces :all}
   :profiles {:uberjar {:aot :all}})
