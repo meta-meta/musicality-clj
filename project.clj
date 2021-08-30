@@ -9,4 +9,5 @@
                  [scad-clj "0.5.3"]]
   :main ^:skip-aot musicality.core
   :target-path "target/%s"
+  :plugins [[lein-codox "0.10.7"]]
   :profiles {:uberjar {:aot :all}})
