@@ -1,5 +1,14 @@
 # musicality
 
+
+## Docs
+
+[musicality.clj docs](https://meta-meta.github.io/musicality-clj/)
+
+Build/publish new docs:
+`lein codox && git subtree push --prefix target/default/doc origin gh-pages`
+
+
 FIXME: description
 
 ## Installation
