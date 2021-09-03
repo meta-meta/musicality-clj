@@ -113,9 +113,9 @@
 
          
                                         ; Two Hearts
-         (set-len 6)
+         (set-len 420)
          (->> (lcm-meter-with-opts
-               [x . x] :repeat [(:hihat-closed-2 cr78) [60 20]]
+               (c/repeat 5 [x . . . . . . . . . .  . x]) :repeat [(:hihat-closed-2 cr78) [60 20]]
                [x .] :expand [(:kick-lo cr78) 70]
                [. x] :expand [[(:snare-1 cr78) (:snare-2 cr78)] [20 30]])
               (send-beats))

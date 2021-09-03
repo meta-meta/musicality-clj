@@ -60,8 +60,14 @@
   :context -> [note note note ...] or \"clear\" (TODO: this will get richer)
   :fn -> fn-name"
   [instr beat type data]
-  (let [addr (if (= type :cc)
+  (let [addr (cond
+               (= type :cc)
                (str "/" instr "/" (name type) "/" beat "/" (first data))
+
+               (= type :oscMsg)
+               (str "/" instr "/" (name type) "/msg/" beat (first data)) ; first member of data is the osc address to be scheduled
+               
+               :else
                (str "/" instr "/" (name type) "/" beat))
         msg (cond 
               (= type :fn)
@@ -71,6 +77,12 @@
               (->> data
                    (rest)
                    (map float))
+
+              (= type :oscMsg)
+              (->> data
+                   (rest)
+                   (map #(if (number? %) (float %) %)))
+              
 
               :else
               (->> data
