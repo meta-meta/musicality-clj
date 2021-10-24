@@ -1,6 +1,8 @@
 (ns musicality.schedule
-  (:use [musicality.osc :as o])
+  (:require [musicality.osc :as o]
+           [musicality.symbols :refer :all])
   (:gen-class))
+
 
 (def dur->max-note-val 
   "a map of duration keyword to Max note value. It would be nice to use ratios but I want this to work in cljs.
@@ -39,30 +41,59 @@
    
 })
 
+(defn send-beat-count
+  "Sends the number of pulses in a loop"
+  [instr pulse-count]
+  (o/send (str "/" instr "/pulseCount") (int pulse-count)))
+
+#_(send-beat-count 420)
+
 (defn send-beat
   "Sends a 'beat' of data to the sequencer. 
-  beat is 1-based; sub-beat is 1-based subdivision of beat.
-  The number of sub-beats is determined by timesig:
-  when beats are 8th notes, there are 12 sub-beats. quarter notes have 24 sub-beats.
+  instr is a string corresponding to osc address of instrument
+  beat is 1-based.  
   type can be :note :cc :fn.
 
   type -> data
   :note -> [note vel dur]
   :cc -> [cc target-val dur]
+  :context -> [note note note ...] or \"clear\" (TODO: this will get richer)
   :fn -> fn-name"
-  ([beat sub-beat type data]
-   (let [addr (str "/midiSeq/" (name type) "/" beat "/" sub-beat)
-         msg (if (= type :fn)
-               [(name data)]
-               (map
-                #(cond
-                   (number? %) (int %)
-                   (keyword? %) (dur->max-note-val %)
-                   :else %)
-                data))]
-     (apply o/send addr msg)))
-  ([beat type data]
-   (send-beat beat 1 type data)))
+  [instr beat type data]
+  (let [addr (cond
+               (= type :cc)
+               (str "/" instr "/" (name type) "/" beat "/" (first data))
+
+               (= type :oscMsg)
+               (str "/" instr "/" (name type) "/msg/" beat (first data)) ; first member of data is the osc address to be scheduled
+               
+               :else
+               (str "/" instr "/" (name type) "/" beat))
+        msg (cond 
+              (= type :fn)
+              [(name data)] ; fn-name
+
+              (= type :cc)
+              (->> data
+                   (rest)
+                   (map float))
+
+              (= type :oscMsg)
+              (->> data
+                   (rest)
+                   (map #(if (number? %) (float %) %)))
+              
+
+              :else
+              (->> data
+                   (vec) ; data might be a #{}
+                   (flatten)
+                   (map #(cond
+                           (number? %) (int %)
+                           (keyword? %) (dur->max-note-val %)
+                           :else %)
+                        )))]
+    (apply o/send addr msg)))
 
 
 (def ^:private fns "A map of fn keywords to definitions." (atom {}))
@@ -78,35 +109,42 @@
     nil))
 
 (defn send-fn
-  "Sends a fn to executed at beat/sub-beat"
-  ([beat sub-beat fn-keyword fn]
-   (swap! fns assoc fn-keyword fn)
-   (send-beat beat sub-beat :fn fn-keyword))
-  ([beat fn-keyword fn] (send-fn beat 1 fn-keyword fn)))
+  "Sends a fn to be executed at beat"
+  [instr beat fn-keyword fn]
+  (swap! fns assoc fn-keyword fn)
+  (send-beat instr beat :fn fn-keyword))
 
-(def ^:private seqs (atom {}))
 
-;; TODO should beats have types merged or as separate sequences?
-;; TODO send sub-beats in send-beat
-(defn send-seq "Sends a sequence of beats. if s is a keyword, lookup in sequences"
-  [type s]
-  (doseq [[beat data] (map-indexed
-                       (fn [idx data] [(+ 1 idx) data])
-                       (if (keyword? s)
-                         (@seqs s)
-                         s))]
-    (when-not (empty? data)
-      (if (every? #(or (number? %) (keyword? %)) data)
-        (send-beat beat 1 type data)
-        (doseq [[sub-beat sub-data] (map-indexed
-                                     (fn [idx sub-data] [(+ 1 idx) sub-data])
-                                     data)]
-          (when-not (empty? sub-data)
-            (send-beat beat sub-beat type sub-data)))))))
+(defn send-beats "Sends a hash-map of beats.
+  Each beat is a map that can contain :note :cc :fn :context data.
+  So s might look like {1 {:note [60 64 :1|4, 65 64 :1|4]}, 4 {:fn :some-fn #()}}"
+  [instr beats]
+  (doseq [[beat mixed-data] beats]
+    #_(prn beat mixed-data)
+    (doseq [[type data] mixed-data]
+      (prn instr beat type data)
+      (if (= :fn type)
+        (apply send-fn instr beat data)
+        (send-beat instr beat type data)))))
+
+
+
+#_(clear "pianoteq")
+#_(send-beat-count "pianoteq" 420)
+#_(send-beats "pianoteq"
+              {1 {:note #{[60 32 :1|1] [66 44 :1|1]} :fn [:my-fn #(+ 1 1)]}
+               4 {:context [0 2 4 6 8 10]}
+               100 {:context ["clear"]
+                    :note #{[65 64 :1|2]}}})
+
+#_(clear "drums")
+#_(send-beats "drums"
+              {1 {:note #{[0 64 :1|1]}}})
+
+
 
 (defn clear "clears all data in all beats. passes through a single argument for convenience"
-  ([] (o/send "/midiSeq/clear"))
-  ([anything] (clear) anything))
+  [instr] (o/send (str "/" instr "/clear")))
 
 (defn init "Creates/opens client and server and registers listeners" 
   ([ip]
@@ -126,7 +164,8 @@
          (init)
          (deinit)
 
-         (clear)
+         (clear "drums")
+         (clear "pianoteq")
 
          ; fns are stored in an atom.
          @fns
@@ -139,8 +178,8 @@
          ; or register and schedule in one shot.
          (send-fn 4 :fn2 #(println "four"))
 
-         (send-beat 1 4 :note [70 60])
-         (send-beat 1 :note [60 23 64 24 67 23 71 51])
+         (send-beat 1 :note [70 60 :1|4])
+         (send-beat 1 :note [60 23 :1|4, 64 24 :1|8, 67 23 :1|16, 71 51 :1|4])
          (send-beat 1 :note [60 64 66 60])
 
          (def dur :1|8)
@@ -151,6 +190,15 @@
                     [67 64 dur, 71 64 dur, 74 64 dur] [55 64 dur] [55 64 dur]
                     [60 64 dur, 64 64 dur, 67 64 dur] [48 64 dur] [48 64 dur]
                     [64 64 dur, 67 64 dur, 71 64 dur] [52 64 dur] [52 64 dur]])
+
+
+         
+         
+         
+
+         
+
+
 
          ; same thing but with flourish in sub-beats
          (send-seq :note
@@ -167,6 +215,7 @@
 
 
          (send-fn 1 :f1 (fn [] (println "yo")  (send-seq :note [[60 30 :1|1]])))
+
 
 
          ; alternate between the two by sending fns that schedule each other
@@ -220,5 +269,25 @@
          (send-beat 2 1 :fn ["my-fn" "arg1" 2 3])
 
          (doseq [n [1 5 9]]
-           (send-beat 1 n :note [(+ 60 n) 60])))
+           (send-beat 1 n :note [(+ 60 n) 60]))
+
+
+
+         (* 12 ; beats
+            12 ; MIDI-beats (24 per quarter note, 12 per eight)
+            8  ; measures
+            )
+
+
+         (let [bpi 32
+               measure-count 8
+               beats-per-measure 12
+               note-value-per-beat 1/8
+               
+               ])
+
+
+
+
+)
 

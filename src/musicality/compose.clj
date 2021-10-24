@@ -1,4 +1,5 @@
 (ns musicality.compose
+  (:require [musicality.symbols :refer :all])
   (:gen-class))
 
 (def pcs "pitch-class keywords" #{:0 :1 :2 :3 :4 :5 :6 :7 :8 :9 :૪ :Ɛ})
@@ -28,11 +29,11 @@
                              pcs-cycle-up
                              pcs-cycle-dn)))))
 
-
 (defn fill "returns a coll of length n filled with v, leaving existing values untouched"
   ([n v coll] (take n (concat coll (repeat v))))
   ([n v] (fill n v []))
   ([n] (fill n [] [])))
+
 
 
 (defn merge-seqs "merges the beats and sub-beats of each sequence, using the length of the longest sequence or max-len.
@@ -60,10 +61,9 @@
         (fill (apply max (map #(count (take max-len %)) seqs)) []) ; start with seq filled with lenth = largest seq or max-len []s
         )))
 
-
-#_(merge-seqs 12 
-          [[[] []] [1 64 :1|1] []]
-          [[[] [2 30 :1|2 4 60 :1|4]] [] []])
+#_(merge-seqs 12
+              [[[] []] [1 64 :1|1] []]
+              [[[] [2 30 :1|2 4 60 :1|4]] [] []])
 
 (defn rotate-seq "rotates sequence by n. given n=2 and s=[a b c d e] return [c d e a b]. given n=-2 return [d e a b c]"
   [n s]
@@ -99,23 +99,25 @@
   ([vel ns] (chord :1|4 vel ns))
   ([ns] (chord 64 ns)))
 
-
 (defn as-coll "returns val-or-coll if coll, or [val-or-coll] if not"
   [val-or-coll] (if (coll? val-or-coll)
                   val-or-coll
                   [val-or-coll]))
 
 ; TODO: allow lazy-seqs for notes, vels, durs
-(defn bin->rhy "Converts a seq of 0s and 1s to seq of notes and []s. Replaces 1s with successive notes in n-or-ns, likewise for vs and ds"
+(defn bin->rhy "Converts a seq of '.'s and 'x's to seq of notes and []s.
+  Replaces 'x's with successive notes in n-or-ns, likewise for vs and ds"
   ([note-or-notes vel-or-vels dur-or-durs bin-seq]
-   (let [indexed-ones (->> bin-seq (filter #(== 1)))
+   (let [bin-zeros-ones (->> bin-seq (map #(if (= x %) 1 0)))
+         indexed-ones (->> bin-zeros-ones                           
+                           (filter #(== 1)))
          zeros-and-indices  (->> indexed-ones
                                  (map-indexed (fn [i n] (if (== n 1) i 0))))
          note-cycle (cycle (as-coll note-or-notes))
          vel-cycle (cycle (as-coll vel-or-vels))
          dur-cycle (cycle (as-coll dur-or-durs))
          mk-note (fn [i] [(nth note-cycle i) (nth vel-cycle i) (nth dur-cycle i)])]
-     (->> bin-seq
+     (->> bin-zeros-ones
           (reduce (fn [[next-index vec] val] (if (== 0 val)
                                                [next-index (conj vec [])]
                                                [(+ 1 next-index) (conj vec (mk-note next-index))]))
@@ -125,6 +127,104 @@
   ([n-or-ns v-or-vs bin-seq] (bin->rhy n-or-ns v-or-vs :1|4 bin-seq))
   ([n-or-ns bin-seq] (bin->rhy n-or-ns 64 :1|4 bin-seq)))
 
-#_(bin->rhy [6 9] 32 :1|2 [0 0 1 0 1 0 1 1 1 0])
+#_(bin->rhy [6 9] 32 :1|2 [. . x . x . x x x .])
 
 
+(defn- split-seq "Extract a tail of all same elements: [1 1 0 0 0] -> [[1 1] [0 0 0]]"
+  [s]
+  (let [l (last s)]
+    (split-with #(not= l %) s)))
+
+(defn- recombine
+  "Distribute tail: [[1] [1] [1] [0] [0]] -> [[1 0] [1 0] [1]]"
+  ([a b] [a b])
+  ([a b c] [a b c])
+  ([a b c & more]
+   (let [s (concat [a b c] more)
+         [head tail] (split-seq s)
+         recombined (map concat head tail)
+         r-len (count recombined)]
+     (if (empty? head)  ;; even pattern (all supbatterns same)
+       s
+       (apply recombine (concat
+                         recombined
+                         (drop r-len (drop-last r-len s))))))))
+
+(defn euclid
+  "Evenly distribute K beats among N subdivisions.
+  Rotates the seq by r.
+  Beats are x and .
+  (euclid 2 6) -> (x . . x . .)
+  (from https://gist.github.com/virtualtam/9d1df5fc6d38c6fc5c3d)"
+  ([k n r]
+   (let [seed (concat (repeat k [x]) (repeat (- n k) [.]))]
+     (->> (apply recombine seed)
+          (flatten)
+          (rotate-seq r))))
+  ([k n] (euclid k n 0)))
+
+
+#_(euclid 2 6)
+#_(euclid 3 4 -1)
+
+#_(euclid 3 4)
+#_(euclid 3 4 2)
+
+#_(euclid 7 12)
+#_(euclid 7 12 3)
+
+(defn expand [mult rhy]
+  (as-> rhy v
+    (interleave v (repeat (count rhy) (repeat (- mult 1) .)))
+    (flatten v)))
+
+(defn repeat [reps x] "repeat x reps times and flatten"
+  (->> x
+       (clojure.core/repeat reps)
+       (flatten)))
+
+
+#_(expand 3 [x x x . x])
+(count (expand 7 [1 1 1]))
+
+(comment ""
+         (musicality.schedule/clear "drums")
+         (musicality.schedule/send-beat-count "drums" 96)
+
+         (musicality.schedule/send-beats "drums" 
+                                         {1  { :note [1 60 :1|1]}} 
+                                        )
+
+         (musicality.schedule/send-beats "drums" 
+                                         
+                                         (->> (euclid 7 12 3)
+                                              (repeat 2)
+                                              (flatten)
+
+                                             (expand 4)
+
+                                             (bin->rhy 12)
+                                              
+                                             (map-indexed (fn [i note] (if (empty? note)
+                                                                          nil
+                                                                          [(+ 1 i) {:note note}])))
+                                             (filter identity)
+                                             (into {})))
+
+         (musicality.schedule/clear "pianoteq")
+         (musicality.schedule/send-beat-count "pianoteq" 96)
+         (musicality.schedule/send-beats "pianoteq" 
+                                         
+                                         (->> (euclid 7 12 1)
+                                              (repeat 4)
+                                              (flatten)
+
+                                              (expand 4)
+
+                                              (bin->rhy [30 32 34 36 38 39 40 41 43 45 46 49 51])
+                                              
+                                              (map-index)
+                                              (filter identity)
+                                              (into {})))
+
+)

@@ -12,7 +12,7 @@
          ; Friedmann uses ip(4)
          :4 ; :4 is already a pitch-class
          :ip4
-         :ip(4) ; invalid
+;         :ip(4) ; invalid
          
          ; ordered pitch interval is the distance and direction between a pitch and a subsequent pitch
          ; Friedmann uses ip<+4>
@@ -40,8 +40,8 @@
          :d1 :d2 :d3 :d4
 
          
-         :1^ ; invalid
-         :^1 ;invalid
+;         :1^ ; invalid
+;         :^1 ;invalid
          ; all valid but only go up to 9. would be nice to use for any pc-set
          ; need Bravura to render them
          ; need minor-mode for input
