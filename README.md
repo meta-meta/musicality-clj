@@ -1,6 +1,21 @@
 # musicality
 
 
+## TODO:
+
+* lighter MIDI scheduler than Max.
+  - OSCIIBOT
+  - ReaLearn - hasOSC->MIDI but maybe not beat clock?
+  - Node - midi.js, should be able to handle CC gracefully too
+  - all solutions need LoopMIDI?
+
+
+
+
+
+
+
+
 ## Docs
 
 [musicality.clj docs](https://meta-meta.github.io/musicality-clj/)
