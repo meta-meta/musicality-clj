@@ -6,7 +6,9 @@
   :dependencies [[com.github.seancorfield/expectations "2.0.0-alpha2"]
                  [org.clojure/clojure "1.10.0"]
                  [overtone/osc-clj "0.8.1"]
-                 [scad-clj "0.5.3"]]
+                 [overtone/midi-clj "0.5.0"]
+                 [scad-clj "0.5.3"]
+                 [org.clojure/data.json "2.5.0"]]
   :main ^:skip-aot musicality.core
   :target-path "target/%s"
   :plugins [[lein-codox "0.10.7"]]
