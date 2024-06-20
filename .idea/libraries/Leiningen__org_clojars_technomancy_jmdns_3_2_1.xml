@@ -1,0 +1,9 @@
+<component name="libraryTable">
+  <library name="Leiningen: org.clojars.technomancy/jmdns:3.2.1">
+    <CLASSES>
+      <root url="jar://$MAVEN_REPOSITORY$/org/clojars/technomancy/jmdns/3.2.1/jmdns-3.2.1.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>
