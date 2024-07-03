@@ -6,7 +6,7 @@
 ;; TODO: could midi sync directly via https://github.com/overtone/midi-clj instead of using Max
 
 (defn connect [ip]
-  (def client (osc-client ip 8000))
+  (def client (osc-client ip 8020))
   (def server (osc-server 9004)))
 
 (defn connect-local [] (connect "localhost"))
