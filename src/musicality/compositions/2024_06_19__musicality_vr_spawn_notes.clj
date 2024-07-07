@@ -5,6 +5,25 @@
 (osc/connect-local)
 
 
+
+(defn organ+ [id]
+  (osc/send "/react/organ" (int id)
+            (json/write-str {
+                             :Diapason      {:Val 421 :NoteType "Irrational"}
+                             :OscAddress     "/organ2"
+                             :Partials (map (fn [i] {:Interval {:Val (+ 1 i) :NoteType "Irrational"}
+                                                     :Amplitude (* i 0.01)
+                                                     :Release 0.1})
+                                            (range 16))
+                             })))
+(defn organ- [id] (osc/send "/react/organ" (int id)))
+(comment
+  (organ+ 0)
+  (organ- 0)
+  )
+
+
+
 (defn midi-beat-clock-wheel+ [id ratio beats pulses]
   (osc/send "/react/midiBeatClockWheel" (int id)
             (json/write-str {
@@ -20,8 +39,10 @@
 
 (defn midi-beat-clock-wheel- [id] (osc/send "/react/midiBeatClockWheel" (int id)))
 
-(midi-beat-clock-wheel+ 1 3/7 1 12)
-(midi-beat-clock-wheel- 1)
+(comment
+  (midi-beat-clock-wheel+ 2 9/7 1 12)
+  (midi-beat-clock-wheel- 1)
+  )
 
 
 
@@ -54,5 +75,8 @@
                                             )
                                           )})))
 
-(tonnegg+ 0 :JI 3/2)
-(tonnegg+ 0 :EDO 64)
+(comment
+
+  (tonnegg+ 0 :JI 3/2)
+  (tonnegg+ 0 :EDO 64)
+  )
