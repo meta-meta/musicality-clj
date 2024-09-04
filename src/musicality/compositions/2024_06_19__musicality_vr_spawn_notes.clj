@@ -7,20 +7,39 @@
 
 
 
-(defn organ+ [id]
+(defn organ+ [id osc-addr osc-port-ambi-viz osc-port-audio-obj osc-port-directivity-shaper diapason partials]
   (osc/send "/react/organ" (int id)
             (json/write-str {
-                             :Diapason   {:Val 261.63 :NoteType "Irrational"}
-                             :OscAddress "/organ2"
-                             :Partials   (map (fn [i] {:Interval  {:Val (+ 1 i) :NoteType "Irrational"}
-                                                       :Amplitude (* (Math/pow (- 15 i) 2) 0.005)
-                                                       :Release   0.5})
-                                              (range 16))
+                             :Diapason   {:Val diapason :NoteType "Irrational"}
+                             :OscAddress osc-addr
+                             :OscPortAmbisonicVisualizer osc-port-ambi-viz
+                             :OscPortAudioObject osc-port-audio-obj
+                             :OscPortDirectivityShaper osc-port-directivity-shaper
+                             :Partials   partials
                              })))
 (defn organ- [id] (osc/send "/react/organ" (int id)))
 (comment
-  (organ+ 0)
+  (organ+ 0 "/organ" 8015 7015 6015 240
+          (->> (range 16)
+               (map (fn [i]
+                      {:Interval  {:Val (+ 1 i) :NoteType "Irrational"}
+                       :Amplitude (* (Math/pow (/ (- 15 i) 15)
+                                               2))
+                       :Release 0
+                       })
+                    )))
   (organ- 0)
+
+  (organ+ 1 "/organ2" 8019 7019 6019 240
+          (->> (range 16)
+               (map (fn [i]
+                      {:Interval  {:Val (+ 1 (* 2 i)) :NoteType "Irrational"}
+                       :Amplitude (* (Math/pow (/ (- 15 i) 15)
+                                               2))
+                       :Release   0
+                       })
+                    )))
+  (organ- 1)
   )
 
 
@@ -60,31 +79,21 @@
   ([id note-type val] (tonnegg+ id note-type val [0 0 0]))
   ([id note-type val localPosition]
    (osc/send "/react/tonnegg" (int id)
-             (json/write-str {:Note      (merge {
-                                                 :NoteType (name note-type)
-                                                 }
+             (json/write-str
+               {:Note      (merge
+                             {:NoteType (name note-type)}
+                             (cond
+                               (= note-type :JI)
+                               (let [ratio (Numbers/toRatio val)]
+                                 {:Val
+                                  {:Numerator   (numerator ratio)
+                                   :Denominator (denominator ratio)}})
 
-                                                (cond
-                                                  (= note-type :JI)
-                                                  (let [ratio (Numbers/toRatio val)]
-                                                    {:Val {
-                                                           :Numerator   (numerator ratio)
-                                                           :Denominator (denominator ratio)
-                                                           }
-                                                     })
-
-                                                  (= note-type :EDO)
-                                                  {:Val             val
-                                                   :OctaveDivisions 12
-                                                   }
-
-                                                  )
-                                                )
-                              :Transform {
-                                          :LocalPosition (let [[x y z] localPosition]
-                                                           {:x x :y y :z z})
-                                          }
-                              }))))
+                               (= note-type :EDO)
+                               {:Val             val
+                                :OctaveDivisions 12}))
+                :Transform {:LocalPosition (let [[x y z] localPosition]
+                                             {:x x :y y :z z})}}))))
 
 (defn tonnegg- [id] (osc/send "/react/tonnegg" (int id)))
 
@@ -100,13 +109,13 @@
 
 
   (defn tonnegg-clear []
-       (map (fn [i] (tonnegg- i)) (range 4)))
+    (map (fn [i] (tonnegg- i)) (range 4)))
 
   (->> [[0 3/2] [1/4 5/4] [1/2 15/8] [3/4 1]]
        (map-indexed (fn [i [pos r]]
-              (let [theta (* Math/PI 2 pos)
-                    trans [(* 0.25 (Math/sin theta)) (* 0.25 (Math/cos theta)) 0]]
-                (tonnegg+ i :JI r trans)))))
+                      (let [theta (* Math/PI 2 pos)
+                            trans [(* 0.25 (Math/sin theta)) (* 0.25 (Math/cos theta)) 0]]
+                        (tonnegg+ i :JI r trans)))))
 
   (defn map-note [i [pos r]]
     (let [theta (* Math/PI 2 pos)
@@ -136,3 +145,12 @@
 
   ; TODO: Tonnegg as fn trigger to queue next measure
   )
+
+
+(comment
+  (def dir-beats (clojure.java.io/file "S:\\_Audio\\Samples From Mars"))
+  (.getAbsolutePath (first (file-seq dir-beats)))
+
+  (->> (file-seq dir-beats)
+       (map #(.getAbsolutePath %))
+       (filter #(clojure.string/ends-with? % "sfz"))))
