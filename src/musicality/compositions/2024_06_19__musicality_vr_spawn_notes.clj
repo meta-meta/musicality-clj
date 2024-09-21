@@ -10,12 +10,12 @@
 (defn organ+ [id osc-addr osc-port-ambi-viz osc-port-audio-obj osc-port-directivity-shaper diapason partials]
   (osc/send "/react/organ" (int id)
             (json/write-str {
-                             :Diapason   {:Val diapason :NoteType "Irrational"}
-                             :OscAddress osc-addr
+                             :Diapason                   {:Val diapason :NoteType "Irrational"}
+                             :OscAddress                 osc-addr
                              :OscPortAmbisonicVisualizer osc-port-ambi-viz
-                             :OscPortAudioObject osc-port-audio-obj
-                             :OscPortDirectivityShaper osc-port-directivity-shaper
-                             :Partials   partials
+                             :OscPortAudioObject         osc-port-audio-obj
+                             :OscPortDirectivityShaper   osc-port-directivity-shaper
+                             :Partials                   partials
                              })))
 (defn organ- [id] (osc/send "/react/organ" (int id)))
 (comment
@@ -25,7 +25,7 @@
                       {:Interval  {:Val (+ 1 i) :NoteType "Irrational"}
                        :Amplitude (* (Math/pow (/ (- 15 i) 15)
                                                2))
-                       :Release 0
+                       :Release   0
                        })
                     )))
   (organ- 0)
@@ -68,6 +68,31 @@
 
 
 
+(defn mallet+
+  ([id]
+   (mallet+ id [0 0 0] [0 0 0] [1.0 1.0 1.0]))
+  ([id localPosition]
+   (mallet+ id localPosition [0 0 0] [1.0 1.0 1.0]))
+  ([id localPosition localRotation]
+   (mallet+ id localPosition localRotation [1.0 1.0 1.0]))
+  ([id localPosition localRotation localScale]
+   (osc/send "/react/mallet" (int id)
+             (json/write-str
+               {:Transform
+                {:localPosition
+                 (let [[x y z] localPosition]
+                   {:x x :y y :z z})
+                 :localRotationEuler
+                 (let [[x y z] localRotation]
+                   {:x x :y y :z z})
+                 :localScale
+                 (let [[x y z] localScale]
+                   {:x x :y y :z z})
+                 }
+                }))))
+
+(defn mallet- [id] (osc/send "/react/mallet" (int id)))
+
 ;see: Musicality.NoteType
 (def note-types #{:EDO
                   :Irrational
@@ -98,6 +123,13 @@
 (defn tonnegg- [id] (osc/send "/react/tonnegg" (int id)))
 
 (comment
+
+  (mallet+ 0 [0 0 0] [-30 -15 0])
+  (mallet+ 1 [0.1 0 0] [-30 0 0])
+  (mallet+ 2 [0.2 0 0] [-30 15 0] [2 2 2])
+  (mallet- 0)
+  (mallet- 1)
+  (mallet- 2)
 
   (tonnegg- 0)
   (tonnegg+ 0 :JI 3/2)
