@@ -5,10 +5,32 @@
 
 (osc/connect-local)
 
-
-
-(defn organ+ [id osc-addr osc-port-ambi-viz osc-port-audio-obj osc-port-directivity-shaper diapason partials]
+(defn organ+ "Spawns an organ. Currently only osc-addr \"/organ1\" and \"/organ2\" are supported."
+  [id & {:keys [
+                diapason
+                localTransform                              ; optional
+                osc-addr
+                osc-port-ambi-viz
+                osc-port-audio-obj
+                osc-port-directivity-shaper
+                partials
+                spawnFromCam                                ; optional
+                ]
+         :or   {partials
+                (->> (range 16)
+                     (map (fn [i]
+                            {:Interval  {:Val      (+ 1 i)
+                                         :NoteType "Irrational"}
+                             :Amplitude (* (Math/pow (/ (- 15 i) 15)
+                                                     2))
+                             :Release   0
+                             })
+                          ))}}]
   (osc/send "/react/organ" (int id)
+            (json/write-str
+              {:LocalTransform localTransform
+               :SpawnFromCam   spawnFromCam
+               })
             (json/write-str {
                              :Diapason                   {:Val diapason :NoteType "Irrational"}
                              :OscAddress                 osc-addr
@@ -19,31 +41,41 @@
                              })))
 (defn organ- [id] (osc/send "/react/organ" (int id)))
 (comment
-  (organ+ 0 "/organ" 8015 7015 6015 240
-          (->> (range 16)
-               (map (fn [i]
-                      {:Interval  {:Val (+ 1 i) :NoteType "Irrational"}
-                       :Amplitude (* (Math/pow (/ (- 15 i) 15)
-                                               2))
-                       :Release   0
-                       })
-                    )))
+  (organ+ 0
+          :diapason 240
+          :osc-addr "/organ"
+          :osc-port-ambi-viz 8015
+          :osc-port-audio-obj 7015
+          :osc-port-directivity-shaper 6015
+          :partials (->> (range 16)
+                         (map (fn [i]
+                                {:Interval  {:Val (+ 1 i) :NoteType "Irrational"}
+                                 :Amplitude (* (Math/pow (/ (- 15 i) 15)
+                                                         2))
+                                 :Release   0
+                                 })
+                              )))
   (organ- 0)
 
-  (organ+ 1 "/organ2" 8019 7019 6019 240
-          (->> (range 16)
-               (map (fn [i]
-                      {:Interval  {:Val (+ 1 (* 2 i)) :NoteType "Irrational"}
-                       :Amplitude (* (Math/pow (/ (- 15 i) 15)
-                                               2))
-                       :Release   0
-                       })
-                    )))
+
+  (organ+ 1
+          :diapason 240
+          :osc-addr "/organ"
+          :osc-port-ambi-viz 8019
+          :osc-port-audio-obj 7019
+          :osc-port-directivity-shaper 6019
+          :partials (->> (range 16)
+                         (map (fn [i]
+                                {:Interval  {:Val (+ 1 (* 2 i)) :NoteType "Irrational"}
+                                 :Amplitude (* (Math/pow (/ (- 15 i) 15)
+                                                         2))
+                                 :Release   0
+                                 })
+                              )))
+
   (organ- 1)
   )
 
-
-(defn to-ratio [maybe-ratio] (Numbers/toRatio maybe-ratio))
 
 (defn midi-beat-clock-wheel+ [id maybe-ratio beats pulses]
   (let [ratio (Numbers/toRatio maybe-ratio)]
@@ -66,32 +98,37 @@
   (midi-beat-clock-wheel- 1)
   )
 
+(defn transform [& {:keys [pos rot sca]
+                    :or   {pos [0 0 0]
+                           rot [0 0 0]
+                           sca [1 1 1]}}]
+  {:localPosition      {:x (pos 0) :y (pos 1) :z (pos 2)}
+   :localRotationEuler {:x (rot 0) :y (rot 1) :z (rot 2)}
+   :localScale         {:x (sca 0) :y (sca 1) :z (sca 2)}})
 
 
 (defn mallet+
-  ([id]
-   (mallet+ id [0 0 0] [0 0 0] [1.0 1.0 1.0]))
-  ([id localPosition]
-   (mallet+ id localPosition [0 0 0] [1.0 1.0 1.0]))
-  ([id localPosition localRotation]
-   (mallet+ id localPosition localRotation [1.0 1.0 1.0]))
-  ([id localPosition localRotation localScale]
-   (osc/send "/react/mallet" (int id)
-             (json/write-str
-               {:Transform
-                {:localPosition
-                 (let [[x y z] localPosition]
-                   {:x x :y y :z z})
-                 :localRotationEuler
-                 (let [[x y z] localRotation]
-                   {:x x :y y :z z})
-                 :localScale
-                 (let [[x y z] localScale]
-                   {:x x :y y :z z})
-                 }
-                }))))
+  [id & {:keys [:localTransform :spawnFromCam]}]
+  (osc/send "/react/mallet" (int id)
+            (json/write-str
+              {:LocalTransform localTransform
+               :SpawnFromCam   spawnFromCam
+               })
+            (json/write-str
+              {})))
 
 (defn mallet- [id] (osc/send "/react/mallet" (int id)))
+
+(comment
+  (mallet+ 0 :spawnFromCam (transform :pos [0 0 1]))
+  (mallet- 0)
+
+  (mallet+ 1 :spawnFromCam (transform :pos [0 0.2 1] :rot [-45 0 0]))
+  (mallet- 1)
+
+  (mallet+ 2 :localTransform (transform :sca [2 2 2]))
+  (mallet- 2)
+  )
 
 ;see: Musicality.NoteType
 (def note-types #{:EDO
@@ -124,12 +161,7 @@
 
 (comment
 
-  (mallet+ 0 [0 0 0] [-30 -15 0])
-  (mallet+ 1 [0.1 0 0] [-30 0 0])
-  (mallet+ 2 [0.2 0 0] [-30 15 0] [2 2 2])
-  (mallet- 0)
-  (mallet- 1)
-  (mallet- 2)
+
 
   (tonnegg- 0)
   (tonnegg+ 0 :JI 3/2)
