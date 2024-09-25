@@ -77,25 +77,39 @@
   )
 
 
-(defn midi-beat-clock-wheel+ [id maybe-ratio beats pulses]
-  (let [ratio (Numbers/toRatio maybe-ratio)]
+(defn midi-beat-clock-wheel+ [id & {:keys [ratio beats pulses]}]
+  (let [r (Numbers/toRatio ratio)]
     (osc/send "/react/midiBeatClockWheel" (int id)
+              (json/write-str {})
               (json/write-str {
-                               :Beats      beats
-                               :Pulses     pulses
-                               :ClockRatio {
-                                            :Val {
-                                                  :Numerator   (numerator ratio)
-                                                  :Denominator (denominator ratio)
-                                                  }
-                                            }
+                               :Beats  beats
+                               :Pulses pulses
+                               :ClockRatio
+                               {
+                                :Val
+                                {
+                                 :Numerator   (numerator r)
+                                 :Denominator (denominator r)
+                                 }
+                                }
                                }))))
 
 (defn midi-beat-clock-wheel- [id] (osc/send "/react/midiBeatClockWheel" (int id)))
 
 (comment
-  (midi-beat-clock-wheel+ 1 1/2 1 12)
+  (midi-beat-clock-wheel+ 1
+                          :beats 7
+                          :pulses 12
+                          :ratio 1/2
+                          )
   (midi-beat-clock-wheel- 1)
+
+  (midi-beat-clock-wheel+ 2
+                          :beats 5
+                          :pulses 8
+                          :ratio 1/2
+                          )
+  (midi-beat-clock-wheel- 2)
   )
 
 (defn transform [& {:keys [pos rot sca]
