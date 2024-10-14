@@ -135,6 +135,15 @@
                                  :Release   0
                                  })
                               )))
+
+  (tonnegg+ :note-type :JI
+            :val 1/1
+            :instrument "/organ"
+            )
+
+  (mallet+ :spawnFromCam (transform :pos [0 0.2 1] :rot [-45 0 0]))
+
+
   (organ- 0)
 
 
@@ -192,7 +201,7 @@
 
 (comment
   (beat-wheel+
-    :beats 7
+    :beats 4
     :pulses 12
     :ratio 1/2
     )
@@ -402,22 +411,39 @@
 
 
 (defn handle-msg [cmp-coll-key osc-msg]
-  (let [[localTransform-json state-json] (:args osc-msg)
-        transforms {:localTransform (json/read-str localTransform-json)}
-        state (json/read-str state-json)
-        id-new (cmp+ cmp-coll-key transforms state)
-        ]
+  (let [args (:args osc-msg)]
     (cond
-      (= cmp-coll-key :beat-wheels)
-      (beat-wheel-send id-new transforms state)
+      (= 1 (count args))                                    ; delete
+      (let [id (first args)]
+        (cond
+          (= cmp-coll-key :beat-wheels)
+          (beat-wheel- id)
 
-      (= cmp-coll-key :mallets)
-      (mallet-send id-new transforms state)
+          (= cmp-coll-key :mallets)
+          (mallet- id)
 
-      (= cmp-coll-key :tonneggs)
-      (tonnegg-send id-new transforms state)
+          (= cmp-coll-key :tonneggs)
+          (tonnegg- id)
 
-      )
+          ))
+
+      (= 2 (count args))                                    ;clone
+      (let [[localTransform-json state-json] args
+            transforms {:localTransform (json/read-str localTransform-json)}
+            state (json/read-str state-json)
+            id-new (cmp+ cmp-coll-key transforms state)
+            ]
+        (cond
+          (= cmp-coll-key :beat-wheels)
+          (beat-wheel-send id-new transforms state)
+
+          (= cmp-coll-key :mallets)
+          (mallet-send id-new transforms state)
+
+          (= cmp-coll-key :tonneggs)
+          (tonnegg-send id-new transforms state)
+
+          )))
 
     )
   )
