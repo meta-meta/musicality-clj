@@ -452,6 +452,76 @@
 (osc/handle "/react/mallet" (partial handle-msg :mallets))
 (osc/handle "/react/tonnegg" (partial handle-msg :tonneggs))
 
+
+
+
+
+(comment
+  (organ+ 0
+          :diapason 240
+          :osc-addr "/organ"
+          :osc-port-ambi-viz 8015
+          :osc-port-audio-obj 7015
+          :osc-port-directivity-shaper 6015
+          :partials (->> (range 16)
+                         (map (fn [i]
+                                {:Interval  {:Val (+ 1 i) :NoteType "Irrational"}
+                                 :Amplitude (* (Math/pow (/ (- 15 i) 15)
+                                                         2))
+                                 :Release   0
+                                 })
+                              )))
+
+  (organ+ 1
+          :diapason 240
+          :osc-addr "/organ2"
+          :osc-port-ambi-viz 8019
+          :osc-port-audio-obj 7019
+          :osc-port-directivity-shaper 6019
+          :partials (->> (range 16)
+                         (map (fn [i]
+                                {:Interval  {:Val (+ 1 (* 2 i)) :NoteType "Irrational"}
+                                 :Amplitude (* (Math/pow (/ (- 15 i) 15)
+                                                         4))
+                                 :Release   0
+                                 })
+                              )))
+
+  (organ- 0)
+  (organ- 1)
+
+  (tonnegg+ :note-type :JI
+            :val 7
+            :instrument "/organ"
+            )
+
+  (tonnegg+ :note-type :JI
+            :val 1/1
+            :instrument "/organ2"
+            )
+
+  (mallet+ :spawnFromCam (transform :pos [0 0.2 1] :rot [-45 0 0]))
+
+  (beat-wheel+
+    :beats 4
+    :pulses 12
+    :ratio 1/2
+    )
+
+  (tonnegg+ :note-type :UnpitchedMidi
+            :val 2
+            :note-collection "CR78"
+            :instrument "/cr78")
+
+  (tonnegg+ :note-type :UnpitchedMidi
+            :val 1
+            :note-collection "TR808"
+            :instrument "/808")
+
+  )
+
+
+
 (comment
   (clojure.pprint/pprint @components)
   (osc/disconnect)
