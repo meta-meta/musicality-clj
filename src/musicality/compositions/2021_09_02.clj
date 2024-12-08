@@ -5,8 +5,8 @@
 
 #_(s/init)
 #_(s/deinit)
-#_(o/send "/pianoteq/oscMsg/host" "192.168.1.33")
-#_(o/send "/pianoteq/oscMsg/port" "9000")
+#_(o/send-osc "/pianoteq/oscMsg/host" "192.168.1.33")
+#_(o/send-osc "/pianoteq/oscMsg/port" "9000")
 
 
 #_(s/send-beat "pianoteq" 1 :oscMsg ["/oled/print" "help" 0 0 35])

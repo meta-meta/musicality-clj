@@ -18,7 +18,7 @@
 (defn handle [addr handler]
   (osc-handle server addr handler))
 
-(defn send [addr & args]
+(defn send-osc [addr & args]
   (apply osc-send client addr args))
 
 

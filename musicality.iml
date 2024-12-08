@@ -22,14 +22,14 @@
     <orderEntry type="library" name="Leiningen: net.mikera/core.matrix:0.42.1" level="project" />
     <orderEntry type="library" name="Leiningen: nrepl:1.0.0" level="project" />
     <orderEntry type="library" name="Leiningen: org.clojars.technomancy/jmdns:3.2.1" level="project" />
-    <orderEntry type="library" name="Leiningen: org.clojure/clojure:1.10.0" level="project" />
+    <orderEntry type="library" name="Leiningen: org.clojure/clojure:1.11.3" level="project" />
     <orderEntry type="library" name="Leiningen: org.clojure/core.cache:0.6.3" level="project" />
     <orderEntry type="library" name="Leiningen: org.clojure/core.match:0.2.2" level="project" />
     <orderEntry type="library" name="Leiningen: org.clojure/core.memoize:0.5.6" level="project" />
-    <orderEntry type="library" name="Leiningen: org.clojure/core.specs.alpha:0.2.44" level="project" />
+    <orderEntry type="library" name="Leiningen: org.clojure/core.specs.alpha:0.2.62" level="project" />
     <orderEntry type="library" name="Leiningen: org.clojure/data.json:2.5.0" level="project" />
     <orderEntry type="library" name="Leiningen: org.clojure/data.priority-map:0.0.2" level="project" />
-    <orderEntry type="library" name="Leiningen: org.clojure/spec.alpha:0.2.176" level="project" />
+    <orderEntry type="library" name="Leiningen: org.clojure/spec.alpha:0.3.218" level="project" />
     <orderEntry type="library" name="Leiningen: org.clojure/tools.analyzer.jvm:0.1.0-beta12" level="project" />
     <orderEntry type="library" name="Leiningen: org.clojure/tools.analyzer:0.1.0-beta12" level="project" />
     <orderEntry type="library" name="Leiningen: org.clojure/tools.macro:0.1.5" level="project" />

@@ -44,7 +44,7 @@
 (defn send-beat-count
   "Sends the number of pulses in a loop"
   [instr pulse-count]
-  (o/send (str "/" instr "/pulseCount") (int pulse-count)))
+  (o/send-osc (str "/" instr "/pulseCount") (int pulse-count)))
 
 #_(send-beat-count 420)
 
@@ -93,7 +93,7 @@
                            (keyword? %) (dur->max-note-val %)
                            :else %)
                         )))]
-    (apply o/send addr msg)))
+    (apply o/send-osc addr msg)))
 
 
 (def ^:private fns "A map of fn keywords to definitions." (atom {}))
@@ -144,7 +144,7 @@
 
 
 (defn clear "clears all data in all beats. passes through a single argument for convenience"
-  [instr] (o/send (str "/" instr "/clear")))
+  [instr] (o/send-osc (str "/" instr "/clear")))
 
 (defn init "Creates/opens client and server and registers listeners" 
   ([ip]
