@@ -5,8 +5,8 @@
 (comment
   (rc/connect)
   (rc/disconnect)
-  (rc/print-state)
-  )
+  (rc/print-state))
+
 
 
 (comment "2024-12-07--performance-materials-prep"
@@ -23,16 +23,16 @@
                                            :Amplitude (* (Math/pow (/ (- 15 i) 15)
                                                                    4))
                                            :Release   (* 0.5 (Math/pow (/ (- 15 i) 15)
-                                                                   4))
-                                           })
-                                        )))
+                                                                   4))}))))
+
+
 
 
          (def organ1 {
                       :note-type  :JI
                       :val        1
-                      :instrument "/organ"
-                      })
+                      :instrument "/organ"})
+
 
          (def scales {
                       :archytas-enharmonic                  [1/1 28/27 16/15 4/3 3/2 14/9 8/5 2/1]
@@ -41,13 +41,13 @@
                       :al-farabi-chromatic                  [1/1 16/15 8/7 4/3 3/2 8/5 12/7 2/1]
                       :al-farabi-diatonic                   [1/1 8/7 64/49 4/3 3/2 12/7 96/49 2/1]
                       :avicenna-malakon-diatonic            [1/1 10/9 8/7 4/3 3/2 5/3 12/7 2/1]
-                      :ptolemy-intense-diatonic             [1/1 9/8 5/4 4/3 3/2 5/3 15/8 2/1]
-                      })
+                      :ptolemy-intense-diatonic             [1/1 9/8 5/4 4/3 3/2 5/3 15/8 2/1]})
+
 
          (def t1 (rc/tonnegg+ :note-type :JI
                               :val 1
-                              :instrument "/organ"
-                              ))
+                              :instrument "/organ"))
+
 
          (rc/tonnegg= t1 (merge organ1 {:val 1}))
 
@@ -61,8 +61,8 @@
              :beats 1
              :pulses 12
              :ratio 1/4
-             :spawnFromCam (rc/transform :pos [-0.75 0 2])
-             ))
+             :spawnFromCam (rc/transform :pos [-0.75 0 2])))
+
          (rc/beat-wheel= bw1
                          :beats 1
                          :pulses 11
@@ -74,8 +74,8 @@
              :beats 1
              :pulses 12
              :ratio 3/4
-             :spawnFromCam (rc/transform :pos [0.75 0 2])
-             ))
+             :spawnFromCam (rc/transform :pos [0.75 0 2])))
+
          (rc/beat-wheel= bw2
                          :beats 1
                          :pulses 11
@@ -94,26 +94,25 @@
          (defn tonnegg-circ [val x y opts]
            (rc/tonnegg+ (merge opts {
                                        :val          val
-                                       :spawnFromCam (rc/transform :pos [x y 2] :sca [0.1 0.1 0.1])
-                                       })))
+                                       :spawnFromCam (rc/transform :pos [x y 2] :sca [0.1 0.1 0.1])})))
+
 
          (def _ nil)
 
 
-         (def )
 
          (def ts
            (->> [0 _ _ _ 7 _ _ _ 6 _ 4 5 6 _ 7 _
                  0 _ _ _ 5 _ _ _ 4 _ _ _ _ _ _ _
                  3 _ _ _ 3 _ _ _ 2 _ 0 1 2 _ 3 _
-                 1 _ 6 0 1 _ 2 _ 0 _ _ _ _ _ _ _ ]
+                 1 _ 6 0 1 _ 2 _ 0 _ _ _ _ _ _ _]
                 (map-indexed (fn [i v] (when v
                                          (let [a (* i (/ (* 2 Math/PI) 64))]
                                            (tonnegg-circ (nth (:ptolemy-intense-diatonic scales) v)
                                                          (+ -0.75 (* 0.5 (Math/sin a)))
                                                          (* 0.5 (Math/cos a))
-                                                         organ1))
-                                         )))
+                                                         organ1)))))
+
 
                 (doall)))
 
@@ -122,14 +121,14 @@
            (->> [2 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
                  3 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
                  2 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
-                 6 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ ]
+                 6 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _]
                 (map-indexed (fn [i v] (when v
                                          (let [a (* i (/ (* 2 Math/PI) 64))]
                                            (tonnegg-circ (nth (:ptolemy-intense-diatonic scales) v)
                                                          (+ -0.75 (* 0.5 (Math/sin a)))
                                                          (* 0.5 (Math/cos a))
-                                                         organ1))
-                                         )))
+                                                         organ1)))))
+
 
                 (doall)))
 
@@ -138,14 +137,14 @@
            (->> [0 _ _ _ _ _ _ 2 _ _ _ _ _ _ _ _
                  4 _ _ _ _ _ _ 6 _ _ _ _ _ _ _ _
                  0 _ _ _ _ _ _ 2 _ _ _ _ _ _ _ _
-                 5 _ _ _ _ _ _ 7 _ _ _ _ _ _ _ _ ]
+                 5 _ _ _ _ _ _ 7 _ _ _ _ _ _ _ _]
                 (map-indexed (fn [i v] (when v
                                          (let [a (* i (/ (* 2 Math/PI) 64))]
                                            (tonnegg-circ (nth (:ptolemy-intense-diatonic scales) v)
                                                          (+ 0.75 (* 0.5 (Math/sin a)))
                                                          (* 0.5 (Math/cos a))
-                                                         organ1))
-                                         )))
+                                                         organ1)))))
+
 
                 (doall)))
 
@@ -158,8 +157,8 @@
                                            (tonnegg-circ v
                                                          (+ -0.75 (* 0.5 (Math/sin a)))
                                                          (* 0.5 (Math/cos a))
-                                                         tr808))
-                                         )))
+                                                         tr808)))))
+
 
                 (doall)))
 
@@ -171,8 +170,8 @@
                                            (tonnegg-circ v
                                                          (+ 0.75 (* 0.5 (Math/sin a)))
                                                          (* 0.5 (Math/cos a))
-                                                         tr808))
-                                         )))
+                                                         tr808)))))
+
 
                 (doall)))
 
@@ -185,9 +184,9 @@
          (rc/tonnegg-clear)
 
          (rc/print-state)
-         (rc/tonnegg- 22)
+         (rc/tonnegg- 22))
 
-         )
+
 
 
 
@@ -203,25 +202,25 @@
                                           {:Interval  {:Val (+ 1 (* 1.5 i)) :NoteType "Irrational"}
                                            :Amplitude (* (Math/pow (/ (- 15 i) 15)
                                                                    2))
-                                           :Release   0
-                                           })
-                                        )))
+                                           :Release   0}))))
+
+
 
 
          (rc/tonnegg+ :note-type :JI
                       :val 1
-                      :instrument "/organ"
-                      )
+                      :instrument "/organ")
+
 
          (rc/tonnegg+ :note-type :JI
                       :val 12/7
-                      :instrument "/organ"
-                      )
+                      :instrument "/organ")
+
 
          (rc/tonnegg+ :note-type :JI
                       :val 8/7
-                      :instrument "/organ"
-                      )
+                      :instrument "/organ")
+
 
          (defn cos-amp [i phase progress]
            (* 1 (Math/cos (+ phase
@@ -239,21 +238,21 @@
                                            :Amplitude (cos-amp i
                                                                (* 2/6 Math/PI)
                                                                (* (* 2 Math/PI)
-                                                                  (/ i 15))
-                                                               )
-                                           :Release   0
-                                           })
-                                        )))
+                                                                  (/ i 15)))
+
+                                           :Release   0}))))
+
+
 
          (rc/tonnegg+ :note-type :JI
                       :val 40/33
-                      :instrument "/organ2"
-                      )
+                      :instrument "/organ2")
+
 
          (rc/tonnegg+ :note-type :JI
                       :val 2/1
-                      :instrument "/organ2"
-                      )
+                      :instrument "/organ2")
+
 
          (rc/print-state)
          ; TODO: snapshot all state command.
@@ -267,10 +266,10 @@
          (rc/beat-wheel+
            :beats 4
            :pulses 4
-           :ratio 1/2
-           )
+           :ratio 1/2))
 
-         )
+
+
 
 
 (comment
@@ -285,14 +284,14 @@
                                    {:Interval  {:Val (+ 1 (* 1.5 i)) :NoteType "Irrational"}
                                     :Amplitude (* (Math/pow (/ (- 15 i) 15)
                                                             2))
-                                    :Release   0
-                                    })
-                                 )))
+                                    :Release   0}))))
+
+
 
   (rc/tonnegg+ :note-type :JI
                :val 1/1
-               :instrument "/organ"
-               )
+               :instrument "/organ")
+
 
   (rc/mallet+ :spawnFromCam (rc/transform :pos [0 0.2 1] :rot [-45 0 0]))
 
@@ -311,12 +310,12 @@
                                    {:Interval  {:Val (+ 1 (* 2 i)) :NoteType "Irrational"}
                                     :Amplitude (* (Math/pow (/ (- 15 i) 15)
                                                             4))
-                                    :Release   0
-                                    })
-                                 )))
+                                    :Release   0}))))
 
-  (rc/organ- 1)
-  )
+
+
+  (rc/organ- 1))
+
 
 
 
@@ -341,15 +340,15 @@
   (rc/beat-wheel+
     :beats 4
     :pulses 12
-    :ratio 1/2
-    )
+    :ratio 1/2)
+
   (rc/beat-wheel- 1)
 
   (defn map-notes [notes]
     (->> notes
          (map vector [0 1/4 2/4 3/4])
-         (map-indexed map-note)
-         ))
+         (map-indexed map-note)))
+
 
   (map-notes [9 7 6 7])
   (map-notes [7 5 4 5])
@@ -387,9 +386,9 @@
                                    {:Interval  {:Val (+ 1 i) :NoteType "Irrational"}
                                     :Amplitude (* (Math/pow (/ (- 15 i) 15)
                                                             2))
-                                    :Release   0
-                                    })
-                                 )))
+                                    :Release   0}))))
+
+
 
   (rc/organ+ 1
              :diapason 60
@@ -402,38 +401,38 @@
                                    {:Interval  {:Val (+ 1 (* 2 i)) :NoteType "Irrational"}
                                     :Amplitude (* (Math/pow (/ (- 15 i) 15)
                                                             4))
-                                    :Release   0
-                                    })
-                                 )))
+                                    :Release   0}))))
+
+
 
   (rc/organ- 0)
   (rc/organ- 1)
 
   (rc/tonnegg+ :note-type :JI
                :val 7
-               :instrument "/organ"
-               )
+               :instrument "/organ")
+
 
   (rc/tonnegg+ :note-type :JI
                :val 1/1
-               :instrument "/organ2"
-               )
+               :instrument "/organ2")
+
 
   (rc/mallet+ :spawnFromCam (transform :pos [0 0.2 1] :rot [-45 0 0]))
 
   (rc/beat-wheel+
     :beats 4
     :pulses 4
-    :ratio 1/2
-    )
+    :ratio 1/2)
+
 
   (rc/beat-wheel- 0)
 
 
   (rc/tonnegg+ :note-type :JI
                :val 1/1
-               :instrument "/organ2"
-               )
+               :instrument "/organ2")
+
 
   (rc/tonnegg+ :note-type :UnpitchedMidi
                :val 2
@@ -443,9 +442,9 @@
   (rc/tonnegg+ :note-type :UnpitchedMidi
                :val 1
                :note-collection "TR808"
-               :instrument "/808")
+               :instrument "/808"))
 
-  )
+
 
 
 

@@ -359,6 +359,9 @@
 (defn tonnegg-clear []
   (map (fn [i] (tonnegg- i)) (range 128)))
 
+(defn tonneggs- [ids]
+  (doseq [x ids] (when x (tonnegg- x))))
+
 
 
 
