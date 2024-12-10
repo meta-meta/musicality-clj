@@ -8,6 +8,7 @@
                        :organs      {}
                        :beat-wheels {}
                        :mallets     {}
+                       :spawners    {}
                        :tonneggs    {}
                        }))
 
@@ -106,10 +107,14 @@
              ratio
              localTransform
              spawnFromCam
+             spawnFromSpawner
+             spawnerId
              ]}]
   (let [r (Numbers/toRatio ratio)
-        transforms {:localTransform localTransform
-                    :spawnFromCam   spawnFromCam
+        transforms {:localTransform   localTransform
+                    :spawnFromCam     spawnFromCam
+                    :spawnFromSpawner spawnFromSpawner
+                    :spawnerId        spawnerId
                     }
         state {
                :Beats  beats
@@ -132,6 +137,8 @@
              ratio
              localTransform
              spawnFromCam
+             spawnFromSpawner
+             spawnerId
              ]
       :as   opts}]
   (let [[transforms state] (beat-wheel-keys->state opts)
@@ -148,6 +155,8 @@
                 ratio
                 localTransform
                 spawnFromCam
+                spawnFromSpawner
+                spawnerId
                 ]
          :as   opts}]
   (let [[transforms state] (beat-wheel-keys->state opts)]
@@ -179,9 +188,16 @@
   (cmp-send-osc "/react/mallet" id transforms state))
 
 (defn mallet+
-  [& {:keys [:localTransform :spawnFromCam]}]
-  (let [transforms {:localTransform localTransform
-                    :spawnFromCam   spawnFromCam
+  [& {:keys [
+             localTransform
+             spawnFromCam
+             spawnFromSpawner
+             spawnerId
+             ]}]
+  (let [transforms {:localTransform   localTransform
+                    :spawnFromCam     spawnFromCam
+                    :spawnFromSpawner spawnFromSpawner
+                    :spawnerId        spawnerId
                     }
         state {}
         id (cmp+ :mallets transforms state)
@@ -207,6 +223,8 @@
                 osc-port-directivity-shaper
                 partials
                 spawnFromCam                                ; optional
+                spawnFromSpawner                            ; optional
+                spawnerId                                   ; optional
                 ]
          :or   {partials
                 (->> (range 16)
@@ -220,18 +238,101 @@
                           ))}}]
   (osc/send-osc "/react/organ" (int id)
                 (json/write-str
-              {:LocalTransform localTransform
-               :SpawnFromCam   spawnFromCam
-               })
+                  {:LocalTransform   localTransform
+                   :SpawnFromCam     spawnFromCam
+                   :spawnFromSpawner spawnFromSpawner
+                   :spawnerId        spawnerId
+                   })
                 (json/write-str {
-                             :Diapason                   {:Val diapason :NoteType "Irrational"}
-                             :OscAddress                 osc-addr
-                             :OscPortAmbisonicVisualizer osc-port-ambi-viz
-                             :OscPortAudioObject         osc-port-audio-obj
-                             :OscPortDirectivityShaper   osc-port-directivity-shaper
-                             :Partials                   partials
-                             })))
+                                 :Diapason                   {:Val diapason :NoteType "Irrational"}
+                                 :OscAddress                 osc-addr
+                                 :OscPortAmbisonicVisualizer osc-port-ambi-viz
+                                 :OscPortAudioObject         osc-port-audio-obj
+                                 :OscPortDirectivityShaper   osc-port-directivity-shaper
+                                 :Partials                   partials
+                                 })))
 (defn organ- [id] (osc/send-osc "/react/organ" (int id)))
+
+
+
+
+(comment "Spawner"
+         (def spawner-id-1
+           (spawner+
+             :isLocked false
+             :isParent false
+             :label "Spawner One"
+             ))
+
+         (spawner= spawner-id-1
+                   :isLocked true
+                   :isParent false
+                   :label "Spawner One (locked)")
+
+         (spawner- spawner-id-1id-1)
+         )
+
+(defn- spawner-send "Sends instructions to create or update a spawner over osc"
+  [id transforms state]
+  (cmp-send-osc "/react/spawner" id transforms state))
+
+
+(defn- spawner-keys->state
+  [& {:keys [
+             isLocked
+             isParent
+             label
+             localTransform
+             spawnFromCam
+             spawnFromSpawner
+             ]}]
+  (let [transforms {:localTransform   localTransform
+                    :spawnFromCam     spawnFromCam
+                    :spawnFromSpawner spawnFromSpawner
+                    }
+        state {
+               :isLocked isLocked
+               :isParent isParent
+               :label    label
+               }]
+    [transforms state]))
+
+(defn spawner+ "Adds a spawner to state and sends over osc. Returns id of the new spawner."
+  [& {:keys [
+             isLocked
+             isParent
+             label
+             localTransform
+             spawnFromCam
+             spawnFromSpawner
+             ]
+      :as   opts}]
+  (let [[transforms state] (spawner-keys->state opts)
+        id (cmp+ :spawners transforms state)]
+    (spawner-send id transforms state)
+    id
+    )
+  )
+
+(defn spawner= "Updates a spawner and sends over osc. Returns id of the new spawner."
+  [id & {:keys [
+                isLocked
+                isParent
+                label
+                localTransform
+                spawnFromCam
+                spawnFromSpawner
+                ]
+         :as   opts}]
+  (let [[transforms state] (spawner-keys->state opts)]
+    (cmp= :spawners id transforms state)
+    (spawner-send id transforms state))
+  )
+
+(defn spawner- "Removes spawner from state and sends over osc."
+  [id]
+  (cmp- :spawners id)
+  (osc/send-osc "/react/spawner" (int id)))
 
 
 
@@ -288,15 +389,19 @@
 
 (defn- tonnegg-keys->state
   [& {:keys [
-             :instrument
-             :localTransform
-             :spawnFromCam
-             :note-collection
-             :note-type
-             :val
+             instrument
+             localTransform
+             note-collection
+             note-type
+             spawnFromCam
+             spawnFromSpawner
+             spawnerId
+             val
              ]}]
-  (let [transforms {:localTransform localTransform
-                    :spawnFromCam   spawnFromCam
+  (let [transforms {:localTransform   localTransform
+                    :spawnFromCam     spawnFromCam
+                    :spawnFromSpawner spawnFromSpawner
+                    :spawnerId        spawnerId
                     }
         state {
                :Instrument instrument
@@ -321,12 +426,14 @@
 
 (defn tonnegg+ "Adds tonnegg to state and sends over osc. Returns id of the created tonnegg."
   [& {:keys [
-             :instrument
-             :localTransform
-             :spawnFromCam
-             :note-collection
-             :note-type
-             :val
+             instrument
+             localTransform
+             note-collection
+             note-type
+             spawnFromCam
+             spawnFromSpawner
+             spawnerId
+             val
              ]
       :as   opts}]
   (let [[transforms state] (tonnegg-keys->state opts)
@@ -337,12 +444,14 @@
 
 (defn tonnegg= "Updates tonnegg in state and sends over osc."
   [id & {:keys [
-                :instrument
-                :localTransform
-                :spawnFromCam
-                :note-collection
-                :note-type
-                :val
+                instrument
+                localTransform
+                note-collection
+                note-type
+                spawnFromCam
+                spawnFromSpawner
+                spawnerId
+                val
                 ]
          :as   opts}]
   (let [[transforms state] (tonnegg-keys->state opts)]

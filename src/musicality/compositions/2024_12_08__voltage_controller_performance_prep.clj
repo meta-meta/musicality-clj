@@ -7,6 +7,41 @@
   (rc/disconnect)
   (rc/print-state))
 
+(comment
+  (def sp1 (rc/spawner+ :spawnFromCam (rc/transform :pos [0 0 1])
+                        :isLocked false
+                        :isParent false
+                        :label "Spawn Here"))
+
+  (rc/spawner= sp1
+               :spawnFromCam (rc/transform :pos [0 0 1])
+               :isLocked true
+               :isParent false
+               :label "Spawn Here(locked)")
+  (rc/spawner= sp1
+               :spawnFromCam (rc/transform :pos [0 0 1])
+               :isLocked false
+               :isParent true
+               :label "Spawn Here")
+
+  (rc/beat-wheel- bw0)
+  (def bw0
+    (rc/beat-wheel+
+      :beats 1
+      :pulses 1
+      :ratio 1/4
+      :spawnFromSpawner (rc/transform :pos [0 1 1])
+      :spawnerId sp1
+      ))
+
+  (rc/beat-wheel= bw0
+                  :beats 1
+                  :pulses 1
+                  :ratio 5/16)
+
+
+  )
+
 
 (def tonnegg-presets
   {
