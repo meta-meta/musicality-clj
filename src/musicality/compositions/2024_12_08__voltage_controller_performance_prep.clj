@@ -1,5 +1,7 @@
 (ns musicality.compositions.2024-12-08--voltage-controller-performance-prep
-  (:require [musicality.react-cmp :as rc])
+  (:require [musicality.react-cmp :as rc]
+            [musicality.osc :as o])
+  (:use [overtone.osc :only (in-osc-bundle)])
   (:import (clojure.lang Numbers)))
 
 (comment
@@ -7,12 +9,21 @@
   (rc/disconnect)
   (rc/print-state))
 
-(comment
-  (def sp1 (rc/spawner+ :spawnFromCam (rc/transform :pos [0 0 1])
-                        :isLocked false
-                        :isParent false
-                        :label "Spawn Here"))
 
+(def state
+  (atom
+    {
+     }))
+
+
+
+(comment
+  (def sp1 (rc/spawner+ :spawnFromCam (rc/transform :pos [0 -0.5 1] :sca [0.5 0.5 0.5])
+                        :isLocked false
+                        :isParent true
+                        :label "A"))
+
+  (rc/spawner- sp1)
   (rc/spawner= sp1
                :spawnFromCam (rc/transform :pos [0 0 1])
                :isLocked true
@@ -24,23 +35,176 @@
                :isParent true
                :label "Spawn Here")
 
+  (def pos0 [0 1 1])
+
+
   (rc/beat-wheel- bw0)
   (def bw0
     (rc/beat-wheel+
       :beats 1
       :pulses 1
       :ratio 1/4
-      :spawnFromSpawner (rc/transform :pos [0 1 1])
+      :spawnFromSpawner (rc/transform :pos pos0)
       :spawnerId sp1
       ))
 
   (rc/beat-wheel= bw0
+                  :beats 2
+                  :pulses 3
+                  :ratio 7/4)
+
+  (rc/tonnegg-clear)
+
+  (def riffs (atom {
+                    :a []
+
+                    }))
+
+  (do
+    (rc/tonneggs- (:a @riffs))
+    (swap! riffs
+           assoc
+           :a
+           (->> [0 _ _ _
+                 _ _ _ _
+                 _ _ _ _]
+                (tonnegg-circ-pattern
+                  :organ0
+                  sp1
+                  pos0
+                  12
+                  (fn [v] (scale-deg->note :ptolemy-intense-diatonic v))
+                  ))))
+
+
+
+  (do
+    (rc/tonneggs- (:a @riffs))
+    (swap! riffs
+           assoc
+           :a
+           (->> [0 _ 1 _
+                 2 _ _ _
+                 0 _ _ _]
+                (tonnegg-circ-pattern
+                  :organ0
+                  sp1
+                  pos0
+                  12
+                  (fn [v] (scale-deg->note :ptolemy-intense-diatonic v))
+                  ))))
+
+
+
+
+  (def pos1 [0 2 1])
+
+  (rc/beat-wheel- bw1)
+  (def bw1
+    (rc/beat-wheel+
+      :beats 1
+      :pulses 1
+      :ratio 1/4
+      :spawnFromSpawner (rc/transform :pos pos1)
+      :spawnerId sp1
+      ))
+
+  (rc/beat-wheel= bw1
                   :beats 1
                   :pulses 1
-                  :ratio 5/16)
+                  :ratio 3/4)
 
+  (do
+    (rc/tonneggs- (:b @riffs))
+    (swap! riffs
+           assoc
+           :b
+           (->> [0 _ 1 _
+                 _ _ _ _
+                 11 _ _ _]
+                (tonnegg-circ-pattern
+                  :organ1
+                  sp1
+                  pos1
+                  12
+                  (fn [v] (scale-deg->note :ptolemy-intense-diatonic v))
+                  ))))
+
+
+
+
+
+
+  (defn riff-a []
+    (rc/tonneggs- (:a @riffs))
+    (swap! riffs
+           assoc
+           :a
+           (->> [0 _ _ _ 7 _ _ _ 6 _ 4 5 6 _ 7 _
+                 0 _ _ _ 5 _ _ _ 4 _ _ _ _ _ _ _
+                 3 _ _ _ 3 _ _ _ 2 _ 0 1 2 _ 3 _
+                 1 _ -1 0 1 _ 2 _ 0 _ _ _ _ _ _ _]
+                (tonnegg-circ-pattern
+                  :organ0
+                  sp1
+                  pos0
+                  64
+                  (fn [v] (scale-deg->note :ptolemy-intense-diatonic (- 3 v)))
+                  )))
+
+    )
+
+  (defn riff-b []
+    (rc/tonneggs- (:a @riffs))
+    (swap! riffs
+           assoc
+           :a
+           (->> [0 _ _ _ 7 _ _ _ 6 _ 4 5 6 _ 7 _
+                 0 _ _ _ 5 _ _ _ 4 _ _ _ _ _ _ _
+                 3 _ _ _ 3 _ _ _ 2 _ 0 1 2 _ 3 _
+                 1 _ -1 0 1 _ 2 _ 0 _ _ _ _ _ _ _]
+                (tonnegg-circ-pattern
+                  :organ0
+                  sp1
+                  pos0
+                  64
+                  (fn [v] (scale-deg->note :ptolemy-intense-diatonic (+ 3 v)))
+                  )))
+
+    )
+
+  (riff-a)
+  (riff-b)
+
+  (in-osc-bundle (o/client) 0
+                 (rc/tonneggs- somewhere))
+
+  (def somewhere
+    (->> [0 _ _ _ 7 _ _ _ 6 _ 4 5 6 _ 7 _
+          0 _ _ _ 5 _ _ _ 4 _ _ _ _ _ _ _
+          3 _ _ _ 3 _ _ _ 2 _ 0 1 2 _ 3 _
+          1 _ -1 0 1 _ 2 _ 0 _ _ _ _ _ _ _]
+         (tonnegg-circ-pattern
+           :organ0
+           sp1
+           pos0
+           64
+           (fn [v] (scale-deg->note :ptolemy-intense-diatonic (- 3 v)))
+           )))
 
   )
+
+(def organ-presets
+  {
+   :organ0 {:osc-addr                    "/organ"
+            :osc-port-ambi-viz           8015
+            :osc-port-audio-obj          7015
+            :osc-port-directivity-shaper 6015}
+   :organ1 {:osc-addr                    "/organ2"
+            :osc-port-ambi-viz           8019
+            :osc-port-audio-obj          7019
+            :osc-port-directivity-shaper 6019}
+   })
 
 
 (def tonnegg-presets
@@ -124,7 +288,8 @@
 (def . nil)
 (def x 1)
 
-(defn tonnegg-circ [preset pos-center pos-on-circle val]
+; TODO: pass beatwheel, use its position and spawner
+(defn tonnegg-circ [preset spawner-id pos-center pos-on-circle val]
   (let [r (Numbers/toRatio pos-on-circle)
         a (* (numerator r)
              (/ (* 2 Math/PI)
@@ -136,21 +301,23 @@
       (merge
         preset
         {
-         :val          val
-         :spawnFromCam (rc/transform
-                         :pos [(+ x (nth pos-center 0))
-                               (+ y (nth pos-center 1))
-                               (nth pos-center 2)]
-                         :sca [0.1 0.1 0.1])}))))
+         :val              val
+         :spawnFromSpawner (rc/transform
+                             :pos [(+ x (nth pos-center 0))
+                                   (+ y (nth pos-center 1))
+                                   (nth pos-center 2)]
+                             :sca [0.1 0.1 0.1])
+         :spawnerId        spawner-id}))))
 
-(defn tonnegg-circ-pattern [preset center-pos divisions val-fn pattern]
+(defn tonnegg-circ-pattern [preset spawner-id pos-center divisions val-fn pattern]
   (->> pattern
        (map-indexed
          (fn [i v]
            (when v
              (tonnegg-circ
                (tonnegg-presets preset)
-               center-pos
+               spawner-id
+               pos-center
                (/ i divisions)
                (val-fn v)
                ))))
@@ -162,23 +329,23 @@
   (rc/organ- 0)
   (rc/organ+
     0
-    :diapason 240
-    :osc-addr "/organ"
-    :osc-port-ambi-viz 8015
-    :osc-port-audio-obj 7015
-    :osc-port-directivity-shaper 6015
-    :partials (->> (range 16)
-                   (map (fn [i]
-                          {:Interval  {:Val      (+ 1 (* 0.25 i))
-                                       :NoteType "Irrational"}
-                           :Amplitude (* (Math/pow (/ (- 15 i) 15)
-                                                   1.1))
-                           :Release   (* 0.25 (Math/pow (/ (- 15 i) 15)
-                                                       1))})))
+    (merge (:organ0 organ-presets)
+           {
+            :spawnFromCam (rc/transform :pos [-1 -1.5 3] :rot [20 -20 0])
 
+            :diapason     240
+            :partials     (->> (range 16)
+                               (map (fn [i]
+                                      {:Interval  {:Val      (+ 1 (* 0.25 i))
+                                                   :NoteType "Irrational"}
+                                       :Amplitude (* (Math/pow (/ (- 15 i) 15)
+                                                               2))
+                                       :Release   (if (> 3 i)
+                                                    0
+                                                    (* 0.3 (Math/pow (/ (- 15 i) 15)
+                                                                     1)))})))}
 
-
-    :spawnFromCam (rc/transform :pos [-1 -1.5 3] :rot [20 -20 0])))
+           )))
 
 
 
@@ -191,24 +358,22 @@
   (rc/organ- 1)
   (rc/organ+
     1
-    :diapason 60
-    :osc-addr "/organ2"
-    :osc-port-ambi-viz 8019
-    :osc-port-audio-obj 7019
-    :osc-port-directivity-shaper 6019
-    :partials (->> (range 16)
-                   (map (fn [i]
-                          {:Interval  {:Val      (+ 1 (* 1 i))
-                                       :NoteType "Irrational"}
-                           :Amplitude (cos-amp i
-                                               (* 2/6 Math/PI)
-                                               (* (* 2 Math/PI)
-                                                  (/ i 15)))
+    (merge (:organ1 organ-presets)
+           {
+            :spawnFromCam (rc/transform :pos [1 -1.5 3] :rot [20 20 0])
+            :diapason     60
+            :partials     (->> (range 16)
+                               (map (fn [i]
+                                      {:Interval  {:Val      (+ 1 (* 2 i))
+                                                   :NoteType "Irrational"}
+                                       :Amplitude (* 0.5 (cos-amp i
+                                                                  (* 2/6 Math/PI)
+                                                                  (* (* 2 Math/PI)
+                                                                     (/ i 15))))
 
-                           :Release   0})))
+                                       :Release   0})))})
 
-
-    :spawnFromCam (rc/transform :pos [1 -1.5 3] :rot [20 20 0])))
+    ))
 
 
 (comment

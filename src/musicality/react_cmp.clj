@@ -1,6 +1,8 @@
 (ns musicality.react-cmp
-  (:require [musicality.osc :as osc]
-            [clojure.data.json :as json])
+  (:require
+    [musicality.osc :as osc]
+    [clojure.data.json :as json])
+  (:use [overtone.osc :only (in-osc-bundle)])
   (:import (clojure.lang Numbers)))
 
 
@@ -461,15 +463,16 @@
 
 (defn tonnegg- "Removes beat-wheel from state and sends over osc."
   [id]
-  (println "delete tonnegg" id)
   (cmp- :tonneggs (int id))
   (osc/send-osc "/react/tonnegg" (int id)))
 
 (defn tonnegg-clear []
-  (map (fn [i] (tonnegg- i)) (range 128)))
+  (in-osc-bundle (osc/client) 0
+                 (doseq [id (range 128)] (tonnegg- id))))
 
 (defn tonneggs- [ids]
-  (doseq [x ids] (when x (tonnegg- x))))
+  (in-osc-bundle (osc/client) 0
+                 (doseq [x ids] (when x (tonnegg- x)))))
 
 
 
