@@ -28,6 +28,11 @@
             :val        1
             :instrument "/organ2"}
 
+   :fn {
+        :instrument "/fn"
+        :note-type :note-type/Function
+        }
+
    :cr78   {:note-type       :note-type/UnpitchedMidi
             :val             1
             :note-collection "CR78"
