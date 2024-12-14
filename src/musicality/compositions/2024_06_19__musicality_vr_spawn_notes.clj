@@ -29,7 +29,7 @@
 
 
          (def organ1 {
-                      :note-type  :JI
+                      :note-type  :note-type/JI
                       :val        1
                       :instrument "/organ"})
 
@@ -44,7 +44,7 @@
                       :ptolemy-intense-diatonic             [1/1 9/8 5/4 4/3 3/2 5/3 15/8 2/1]})
 
 
-         (def t1 (rc/tonnegg+ :note-type :JI
+         (def t1 (rc/tonnegg+ :note-type :note-type/JI
                               :val 1
                               :instrument "/organ"))
 
@@ -85,7 +85,7 @@
 
 
 
-         (def tr808 {:note-type       :UnpitchedMidi
+         (def tr808 {:note-type       :note-type/UnpitchedMidi
                      :val             1
                      :note-collection "TR808"
                      :instrument      "/808"})
@@ -207,17 +207,17 @@
 
 
 
-         (rc/tonnegg+ :note-type :JI
+         (rc/tonnegg+ :note-type :note-type/JI
                       :val 1
                       :instrument "/organ")
 
 
-         (rc/tonnegg+ :note-type :JI
+         (rc/tonnegg+ :note-type :note-type/JI
                       :val 12/7
                       :instrument "/organ")
 
 
-         (rc/tonnegg+ :note-type :JI
+         (rc/tonnegg+ :note-type :note-type/JI
                       :val 8/7
                       :instrument "/organ")
 
@@ -244,12 +244,12 @@
 
 
 
-         (rc/tonnegg+ :note-type :JI
+         (rc/tonnegg+ :note-type :note-type/JI
                       :val 40/33
                       :instrument "/organ2")
 
 
-         (rc/tonnegg+ :note-type :JI
+         (rc/tonnegg+ :note-type :note-type/JI
                       :val 2/1
                       :instrument "/organ2")
 
@@ -288,7 +288,7 @@
 
 
 
-  (rc/tonnegg+ :note-type :JI
+  (rc/tonnegg+ :note-type :note-type/JI
                :val 1/1
                :instrument "/organ")
 
@@ -327,12 +327,12 @@
        (map-indexed (fn [i [pos r]]
                       (let [theta (* Math/PI 2 pos)
                             trans [(* 0.25 (Math/sin theta)) (* 0.25 (Math/cos theta)) 0]]
-                        (rc/tonnegg+ i :JI r trans)))))
+                        (rc/tonnegg+ i :note-type/JI r trans)))))
 
   (defn map-note [i [pos r]]
     (let [theta (* Math/PI 2 pos)
           trans [(* -0.25 (Math/sin theta)) (* 0.25 (Math/cos theta)) 0]]
-      (rc/tonnegg+ i :EDO (+ (* 12 7) r) trans)))
+      (rc/tonnegg+ i :note-type/EDO (+ (* 12 7) r) trans)))
 
   (rc/tonnegg-clear)
 
@@ -408,12 +408,12 @@
   (rc/organ- 0)
   (rc/organ- 1)
 
-  (rc/tonnegg+ :note-type :JI
+  (rc/tonnegg+ :note-type :note-type/JI
                :val 7
                :instrument "/organ")
 
 
-  (rc/tonnegg+ :note-type :JI
+  (rc/tonnegg+ :note-type :note-type/JI
                :val 1/1
                :instrument "/organ2")
 
@@ -429,17 +429,17 @@
   (rc/beat-wheel- 0)
 
 
-  (rc/tonnegg+ :note-type :JI
+  (rc/tonnegg+ :note-type :note-type/JI
                :val 1/1
                :instrument "/organ2")
 
 
-  (rc/tonnegg+ :note-type :UnpitchedMidi
+  (rc/tonnegg+ :note-type :note-type/UnpitchedMidi
                :val 2
                :note-collection "CR78"
                :instrument "/cr78")
 
-  (rc/tonnegg+ :note-type :UnpitchedMidi
+  (rc/tonnegg+ :note-type :note-type/UnpitchedMidi
                :val 1
                :note-collection "TR808"
                :instrument "/808"))

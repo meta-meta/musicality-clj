@@ -16,32 +16,6 @@
 
 (defn print-state [] (clojure.pprint/pprint @components))
 
-
-(comment
-
-  ; TODO: tonnegg fn trigger
-  (defn send-fn
-    "Sends a fn to be executed at beat"
-    [instr beat fn-keyword fn]
-    (swap! fns assoc fn-keyword fn)
-    (send-beat instr beat :fn fn-keyword))
-
-  (def ^:private fns "A map of fn keywords to definitions." (atom {}))
-
-  (defn- handle-fn "Executes fn parsed from osc-msg."
-    [osc-msg]
-    (let [msg (first (:args osc-msg))
-          fn-keyword (keyword msg)
-          fns @fns]
-      (if (contains? fns fn-keyword)
-        ((fns fn-keyword))
-        (println (str "couldn't find fn " fn-keyword)))
-      nil))
-
-  (osc/handle "/fn" #'handle-fn)
-  )
-
-
 (defn- next-id [cmp-coll-key]
   (let [cmp-coll (cmp-coll-key @components)]
     (->> (range)
@@ -342,51 +316,75 @@
 
 (comment "Tonnegg"
 
-         (tonnegg+ :note-type :JI
+         (tonnegg+ :note-type :note-type/JI
                    :val 1/1
                    :instrument "/organ"
                    )
-         (tonnegg+ :note-type :JI
+         (tonnegg+ :note-type :note-type/JI
                    :val 17/16
                    :instrument "/organ"
                    )
 
-         (tonnegg+ :note-type :JI
+         (tonnegg+ :note-type :note-type/JI
                    :val 1/1
                    :instrument "/organ2"
                    )
-         (tonnegg+ :note-type :JI
+         (tonnegg+ :note-type :note-type/JI
                    :val 3/2
                    :instrument "/organ2"
                    )
 
-         (tonnegg+ :note-type :JI
+         (tonnegg+ :note-type :note-type/JI
                    :val 17/16
                    :instrument "/organ2"
                    )
-         (tonnegg+ :note-type :EDO
+         (tonnegg+ :note-type :note-type/EDO
                    :val 64
                    :instrument "/organ")
 
-         (tonnegg+ :note-type :UnpitchedMidi
+         (tonnegg+ :note-type :note-type/UnpitchedMidi
                    :val 2
                    :note-collection "CR78"
                    :instrument "/cr78")
 
-         (tonnegg+ :note-type :UnpitchedMidi
+         (tonnegg+ :note-type :note-type/UnpitchedMidi
                    :val 1
                    :note-collection "TR808"
                    :instrument "/808"))
 
 ;see: Musicality.NoteType
-(def note-types #{:EDO
+(def note-types #{:note-type/EDO
                   :Irrational
-                  :JI
+                  :note-type/JI
                   :RawFreq
-                  :UnpitchedMidi})
+                  :note-type/UnpitchedMidi})
+
+
+
+(def ^:private fns "A map of fn keywords to definitions." (atom {}))
+
+(defn add-fn
+  "Adds fn to fns map."
+  [fn-keyword fn]
+  (swap! fns assoc fn-keyword fn)
+  )
+
+(defn- handle-fn "Executes fn parsed from osc-msg."
+  [osc-msg]
+  (let [msg (first (:args osc-msg))
+        fn-keyword (keyword msg)
+        fns @fns]
+    (if (contains? fns fn-keyword)
+      ((fns fn-keyword))
+      (println (str "couldn't find fn " fn-keyword)))
+    nil))
+
 
 (defn- tonnegg-send ""
-  [id transforms state]
+  [id transforms state fn]
+  (when fn                                                  ; TODO: confirm note-type is Function
+    (add-fn (keyword (get-in state [:Note :Val]))           ;TODO: allow namespaced keywords
+            fn))
   (cmp-send-osc "/react/tonnegg" id transforms state))
 
 (defn- tonnegg-keys->state
@@ -409,17 +407,20 @@
                :Instrument instrument
                :Note       (merge {:NoteType (name note-type)}
                                   (cond
-                                    (= note-type :JI)
+                                    (= note-type :note-type/JI)
                                     (let [ratio (Numbers/toRatio val)]
                                       {:Val
                                        {:Numerator   (numerator ratio)
                                         :Denominator (denominator ratio)}})
 
-                                    (= note-type :EDO)
+                                    (= note-type :note-type/EDO)
                                     {:Val             val
                                      :OctaveDivisions 12}
 
-                                    (= note-type :UnpitchedMidi)
+                                    (= note-type :note-type/Function)
+                                    {:Val val}
+
+                                    (= note-type :note-type/UnpitchedMidi)
                                     {:Val            val
                                      :NoteCollection note-collection}
                                     ))
@@ -428,6 +429,7 @@
 
 (defn tonnegg+ "Adds tonnegg to state and sends over osc. Returns id of the created tonnegg."
   [& {:keys [
+             fn
              instrument
              localTransform
              note-collection
@@ -441,11 +443,12 @@
   (let [[transforms state] (tonnegg-keys->state opts)
         id (cmp+ :tonneggs transforms state)
         ]
-    (tonnegg-send id transforms state)
+    (tonnegg-send id transforms state fn)
     id))
 
 (defn tonnegg= "Updates tonnegg in state and sends over osc."
   [id & {:keys [
+                fn
                 instrument
                 localTransform
                 note-collection
@@ -458,7 +461,7 @@
          :as   opts}]
   (let [[transforms state] (tonnegg-keys->state opts)]
     (cmp= :tonneggs id transforms state)
-    (tonnegg-send id transforms state)
+    (tonnegg-send id transforms state fn)
     id))
 
 (defn tonnegg- "Removes beat-wheel from state and sends over osc."
@@ -508,7 +511,7 @@
           (mallet-send id-new transforms state)
 
           (= cmp-coll-key :tonneggs)
-          (tonnegg-send id-new transforms state)
+          (tonnegg-send id-new transforms state nil)
 
           )))
 
@@ -517,6 +520,7 @@
 
 (defn connect []
   (osc/connect-local)
+  (osc/handle "/fn" #'handle-fn)
   (osc/handle "/react/beatWheel" (partial handle-msg :beat-wheels))
   (osc/handle "/react/mallet" (partial handle-msg :mallets))
   (osc/handle "/react/tonnegg" (partial handle-msg :tonneggs)))

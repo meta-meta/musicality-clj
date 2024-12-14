@@ -1,8 +1,9 @@
 (ns musicality.compositions.2024-12-08--voltage-controller-performance-prep
   (:require [musicality.react-cmp :as rc]
-            [musicality.osc :as o])
-  (:use [overtone.osc :only (in-osc-bundle)])
-  (:import (clojure.lang Numbers)))
+            [musicality.osc :as o]
+            [musicality.react-presets :refer :all])
+
+  )
 
 (comment
   (rc/connect)
@@ -18,6 +19,17 @@
 
 
 (comment
+
+
+  (rc/mallet+ :spawnFromCam (rc/transform :pos [0 0.2 1] :rot [-45 0 0]))
+
+  (rc/tonnegg+ :fn #(println "yo world")
+               :instrument "/fn"
+               :note-type :note-type/Function
+               :val "yoyo world"
+               :spawnFromCam (rc/transform :pos [0 0 1] :sca [0.1 0.1 0.1]))
+
+
   (def sp1 (rc/spawner+ :spawnFromCam (rc/transform :pos [0 -0.5 1] :sca [0.5 0.5 0.5])
                         :isLocked false
                         :isParent true
@@ -176,9 +188,6 @@
   (riff-a)
   (riff-b)
 
-  (in-osc-bundle (o/client) 0
-                 (rc/tonneggs- somewhere))
-
   (def somewhere
     (->> [0 _ _ _ 7 _ _ _ 6 _ 4 5 6 _ 7 _
           0 _ _ _ 5 _ _ _ 4 _ _ _ _ _ _ _
@@ -194,134 +203,9 @@
 
   )
 
-(def organ-presets
-  {
-   :organ0 {:osc-addr                    "/organ"
-            :osc-port-ambi-viz           8015
-            :osc-port-audio-obj          7015
-            :osc-port-directivity-shaper 6015}
-   :organ1 {:osc-addr                    "/organ2"
-            :osc-port-ambi-viz           8019
-            :osc-port-audio-obj          7019
-            :osc-port-directivity-shaper 6019}
-   })
 
 
-(def tonnegg-presets
-  {
-   :organ0 {
-            :note-type  :JI
-            :val        1
-            :instrument "/organ"}
 
-   :organ1 {
-            :note-type  :JI
-            :val        1
-            :instrument "/organ2"}
-
-   :cr78   {:note-type       :UnpitchedMidi
-            :val             1
-            :note-collection "CR78"
-            :instrument      "/cr78"}
-   :tr808  {:note-type       :UnpitchedMidi
-            :val             1
-            :note-collection "TR808"
-            :instrument      "/808"}})
-
-(def scales {
-             :archytas-enharmonic                  [1/1 28/27 16/15 4/3 3/2 14/9 8/5]
-             :perret-tartini-pachymeres-enharmonic [1/1 21/20 16/15 4/3 3/2 63/40 8/5]
-             :barbour-chromatic                    [1/1 64/63 8/7 4/3 3/2 32/21 12/7]
-             :al-farabi-chromatic                  [1/1 16/15 8/7 4/3 3/2 8/5 12/7]
-             :al-farabi-diatonic                   [1/1 8/7 64/49 4/3 3/2 12/7 96/49]
-             :avicenna-malakon-diatonic            [1/1 10/9 8/7 4/3 3/2 5/3 12/7]
-             :ptolemy-intense-diatonic             [1/1 9/8 5/4 4/3 3/2 5/3 15/8]})
-
-(defn scale-deg->note [scale-key scale-degree]
-  (let [scale (scale-key scales)
-        n (nth scale (mod scale-degree (count scale)))
-        mult (Numbers/toRatio                               ; (rationalize 1.0) => 1N
-               (rationalize                                 ; (Numbers/toRatio 0.25) => 0/1
-                 (Math/pow 2 (Math/floorDiv scale-degree
-                                            (count scale)))))]
-    (* n mult)))
-
-(Numbers/toRatio (rationalize 0.25))
-
-(def cr78-samples
-  {:BongoH  0
-   :BongoL  1
-   :CH3     2
-   :CH5     3
-   :Conga5  4
-   :Conga7  5
-   :Kick    6
-   :KickHi  7
-   :OH3     8
-   :OH5     9
-   :OH7     10
-   :Perc17  11
-   :Perc27  12
-   :Rim     13
-   :Snare13 14
-   :Snare14 15})
-
-(def tr808-samples
-  {:BDLo    0
-   :BDLong  1
-   :BDHi    2
-   :CH      3
-   :Clap    4
-   :Claves  5
-   :Cowbell 6
-   :Cymbal  7
-   :Maracas 8
-   :OH      9
-   :Rim     10
-   :SnareLo 11
-   :SnareHi 12
-   :TomHi   13
-   :TomLo   14
-   :TomMid  15})
-
-(def _ nil)
-(def . nil)
-(def x 1)
-
-; TODO: pass beatwheel, use its position and spawner
-(defn tonnegg-circ [preset spawner-id pos-center pos-on-circle val]
-  (let [r (Numbers/toRatio pos-on-circle)
-        a (* (numerator r)
-             (/ (* 2 Math/PI)
-                (denominator r)))
-        x (* 0.5 (Math/sin a))
-        y (* 0.5 (Math/cos a))
-        ]
-    (rc/tonnegg+
-      (merge
-        preset
-        {
-         :val              val
-         :spawnFromSpawner (rc/transform
-                             :pos [(+ x (nth pos-center 0))
-                                   (+ y (nth pos-center 1))
-                                   (nth pos-center 2)]
-                             :sca [0.1 0.1 0.1])
-         :spawnerId        spawner-id}))))
-
-(defn tonnegg-circ-pattern [preset spawner-id pos-center divisions val-fn pattern]
-  (->> pattern
-       (map-indexed
-         (fn [i v]
-           (when v
-             (tonnegg-circ
-               (tonnegg-presets preset)
-               spawner-id
-               pos-center
-               (/ i divisions)
-               (val-fn v)
-               ))))
-       (doall)))
 
 
 (comment
@@ -417,8 +301,8 @@
              :tr808
              pos0
              16
-             (fn [v] (cond (= 1 v) (:BDHi tr808-samples)
-                           (= 2 v) (:SnareHi tr808-samples)))
+             (fn [v] (cond (= 1 v) (:tr808/BDHi tr808-samples)
+                           (= 2 v) (:tr808/SnareHi tr808-samples)))
              ))
       ))
 
@@ -432,7 +316,7 @@
              :tr808
              pos0
              16
-             (fn [v] (:BDLo tr808-samples))
+             (fn [v] (:tr808/BDLo tr808-samples))
              ))
       (->> [x . x . . . . .
             x . x . . x . .]
@@ -440,7 +324,7 @@
              :cr78
              pos0
              16
-             (fn [v] (:Conga7 cr78-samples))
+             (fn [v] (:cr78/Conga7 cr78-samples))
              ))
       (->> [. . 1 . . . . .
             1 . 2 2 2 . 2 1
@@ -450,8 +334,8 @@
              :cr78
              pos0
              32
-             (fn [v] (cond (= 1 v) (:BongoL cr78-samples)
-                           (= 2 v) (:BongoH cr78-samples)))
+             (fn [v] (cond (= 1 v) (:cr78/BongoL cr78-samples)
+                           (= 2 v) (:cr78/BongoH cr78-samples)))
              ))
       ))
 
@@ -483,8 +367,8 @@
              :cr78
              pos1
              12
-             (fn [v] (cond (= 1 v) (:BongoL cr78-samples)
-                           (= 2 v) (:BongoH cr78-samples)))
+             (fn [v] (cond (= 1 v) (:cr78/BongoL cr78-samples)
+                           (= 2 v) (:cr78/BongoH cr78-samples)))
              ))
       ))
 
@@ -516,8 +400,8 @@
              :cr78
              pos2
              12
-             (fn [v] (cond (= 1 v) (:Conga5 cr78-samples)
-                           (= 2 v) (:Conga7 cr78-samples)))
+             (fn [v] (cond (= 1 v) (:cr78/Conga5 cr78-samples)
+                           (= 2 v) (:cr78/Conga7 cr78-samples)))
              ))
       ))
 
