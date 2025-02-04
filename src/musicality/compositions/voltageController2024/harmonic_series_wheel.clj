@@ -1,12 +1,19 @@
 (ns musicality.compositions.voltageController2024.harmonic-series-wheel
   (:require [musicality.react-cmp :as rc]
             [musicality.osc :as o]
+            [musicality.osc-reaper :as rea]
             [musicality.react-presets :refer :all]))
 
-(comment
+(comment "Musicality OSC"
   (rc/connect)
   (rc/disconnect)
   (rc/print-state))
+
+(comment "REAPER OSC"
+  (rea/connect-local)
+  (rea/disconnect)
+  (rea/bpm-set 80)
+  )
 
 (def state (atom {
                   :sp1 nil
@@ -21,9 +28,9 @@
     1
     (merge (:organ1 organ-presets)
            {
-            :spawnFromCam (rc/transform :pos [0 0 2] :rot [20 20 0] :sca [0.5 0.5 0.5])
+            :spawnFromCam (rc/transform :pos [0 0 2] :rot [3 0 0] :sca [0.5 0.5 0.5])
 
-            :diapason     120
+            :diapason     50
             :partials     (->> (range 16)
                                (map (fn [i]
                                       {:Interval  {:Val      (+ 1 (* 2 i))
@@ -80,10 +87,19 @@
   (defn harmonics []
     (rc/tonneggs- (:ids @state))
     (swap! state assoc :ids
-           (let [ns (->> (range 1 (+ 2 (rand-int 20)) 1)
+           (let [ns (->> (range 1 (+ 1 (rand-int 5)) 1)
                          (identity)
+                         #_(map (fn [i]
+                                (if (and (> 10 i) (even? i))
+                                  _
+                                  (* (if (odd? i) 5/22
+                                                 5/16)
+                                     i))
+
+                                ))
                          #_(reverse)
-                         (shuffle))
+                         #_(shuffle)
+                         )
                  len (count ns)]
              (->> ns
                   (tonnegg-circ-pattern
@@ -94,13 +110,15 @@
                     (fn [v] v)
                     )))))
 
+
   (harmonics)
 
   (rc/tonnegg+ :fn #'harmonics
                :instrument "/fn"
                :note-type :note-type/Function
                :val "yo"
-               :spawnFromSpawner (rc/transform :pos [-0.5 0 0] :sca [0.1 0.1 0.1])
+               :spawnFromSpawner (rc/transform :pos (pos-on-circle posB 0)
+                                               :sca [0.1 0.1 0.1])
                :spawnerId sp2)
 
   (rc/mallet+ :spawnFromCam (rc/transform :pos [0 0.2 1] :rot [-45 0 0]))

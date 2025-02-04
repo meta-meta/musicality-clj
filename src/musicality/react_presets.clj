@@ -28,10 +28,10 @@
             :val        1
             :instrument "/organ2"}
 
-   :fn {
-        :instrument "/fn"
-        :note-type :note-type/Function
-        }
+   :fn     {
+            :instrument "/fn"
+            :note-type  :note-type/Function
+            }
 
    :cr78   {:note-type       :note-type/UnpitchedMidi
             :val             1
@@ -102,28 +102,29 @@
 (def . nil)
 (def x 1)
 
-
-
-; TODO: pass beatwheel, use its position and spawner
-(defn tonnegg-circ [preset spawner-id pos-center pos-on-circle val]
-  (let [r (Numbers/toRatio pos-on-circle)
+(defn pos-on-circle [pos-center ratio]
+  (let [r (Numbers/toRatio ratio)
         a (* (numerator r)
              (/ (* 2 Math/PI)
                 (denominator r)))
         x (* 0.5 (Math/sin a))
         y (* 0.5 (Math/cos a))
         ]
-    (rc/tonnegg+
-      (merge
-        preset
-        {
-         :val              val
-         :spawnFromSpawner (rc/transform
-                             :pos [(+ x (nth pos-center 0))
-                                   (+ y (nth pos-center 1))
-                                   (nth pos-center 2)]
-                             :sca [0.1 0.1 0.1])
-         :spawnerId        spawner-id}))))
+    [(+ x (nth pos-center 0))
+     (+ y (nth pos-center 1))
+     (nth pos-center 2)]))
+
+; TODO: pass beatwheel, use its position and spawner
+(defn tonnegg-circ [preset spawner-id pos-center pos-on-circle-ratio val]
+  (rc/tonnegg+
+    (merge
+      preset
+      {
+       :val              val
+       :spawnFromSpawner (rc/transform
+                           :pos (pos-on-circle pos-center pos-on-circle-ratio)
+                           :sca [0.1 0.1 0.1])
+       :spawnerId        spawner-id})))
 
 (defn tonnegg-circ-pattern [preset spawner-id pos-center divisions val-fn pattern]
   (->> pattern
