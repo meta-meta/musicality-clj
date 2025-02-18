@@ -5,16 +5,20 @@
   (:use [overtone.osc :only (in-osc-bundle)])
   (:import (clojure.lang Numbers)))
 
+(def initial-state
+  {
+   :organs      {}
+   :beat-wheels {}
+   :mallets     {}
+   :spawners    {}
+   :tonneggs    {}
+   })
 
-(def components (atom {
-                       :organs      {}
-                       :beat-wheels {}
-                       :mallets     {}
-                       :spawners    {}
-                       :tonneggs    {}
-                       }))
+(def components (atom initial-state))
 
 (defn print-state [] (clojure.pprint/pprint @components))
+
+(defn clear-state [] (reset! components initial-state))
 
 (defn- next-id [cmp-coll-key]
   (let [cmp-coll (cmp-coll-key @components)]

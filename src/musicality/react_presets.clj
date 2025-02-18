@@ -102,6 +102,34 @@
 (def . nil)
 (def x 1)
 
+
+; https://www.redblobgames.com/grids/hexagons/#hex-to-pixel-axial
+(defn hex->xy [q r cell-size]
+  [
+   (float (* cell-size (+ (* (Math/sqrt 3) q)
+                          (* r
+                             (/ (Math/sqrt 3) 2)))))
+   (float (* cell-size (* -3/2 r)))
+   ]
+  )
+
+(defn pos-on-tonnetz [pos-center q r size]
+  (let [[x y] (hex->xy q r size)]
+    [(+ x (nth pos-center 0))
+     (+ y (nth pos-center 1))
+     (nth pos-center 2)]))
+
+(defn tonnegg-tonnetz [preset spawner-id pos-center q r val]
+  (rc/tonnegg+
+    (merge
+      preset
+      {
+       :val              val
+       :spawnFromSpawner (rc/transform
+                           :pos (pos-on-tonnetz pos-center q r 0.06)
+                           :sca [0.1 0.1 0.1])
+       :spawnerId        spawner-id})))
+
 (defn pos-on-circle [pos-center ratio]
   (let [r (Numbers/toRatio ratio)
         a (* (numerator r)
