@@ -5,15 +5,17 @@
             [musicality.react-presets :refer :all]))
 
 (comment "Musicality OSC"
-  (rc/connect)
-  (rc/disconnect)
-  (rc/print-state))
+         (rc/connect)
+         (rc/disconnect)
+         (rc/clear-state)
+         (rc/print-state)
+         )
 
 (comment "REAPER OSC"
-  (rea/connect-local)
-  (rea/disconnect)
-  (rea/bpm-set 80)
-  )
+         (rea/connect-local)
+         (rea/disconnect)
+         (rea/bpm-set 80)
+         )
 
 (def state (atom {
                   :sp1 nil
@@ -90,13 +92,13 @@
            (let [ns (->> (range 1 (+ 1 (rand-int 5)) 1)
                          (identity)
                          #_(map (fn [i]
-                                (if (and (> 10 i) (even? i))
-                                  _
-                                  (* (if (odd? i) 5/22
-                                                 5/16)
-                                     i))
+                                  (if (and (> 10 i) (even? i))
+                                    _
+                                    (* (if (odd? i) 5/22
+                                                    5/16)
+                                       i))
 
-                                ))
+                                  ))
                          #_(reverse)
                          #_(shuffle)
                          )

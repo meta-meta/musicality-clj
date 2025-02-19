@@ -43,10 +43,16 @@
   (swap! components #(update-in % [cmp-coll-key] dissoc id)))
 
 (defn- cmp-send-osc "Sends cmp state and transforms over osc."
-  [addr id transforms state]
-  (osc/send-osc addr (int id)
-                (json/write-str transforms)
-                (json/write-str state)))
+  [addr id transforms state maybe-clone-source-id]
+  (if maybe-clone-source-id
+    (osc/send-osc addr (int id)
+                  (json/write-str transforms)
+                  (json/write-str state)
+                  (int maybe-clone-source-id))
+    (osc/send-osc addr (int id)
+                  (json/write-str transforms)
+                  (json/write-str state)))
+  )
 
 (defn transform [& {:keys [pos rot sca]
                     :or   {pos [0 0 0]
@@ -76,8 +82,8 @@
          )
 
 (defn- beat-wheel-send "Sends instructions to create or update a beat-wheel over osc"
-  [id transforms state]
-  (cmp-send-osc "/react/beatWheel" id transforms state))
+  [id transforms state maybe-clone-source-id]
+  (cmp-send-osc "/react/beatWheel" id transforms state maybe-clone-source-id))
 
 
 (defn- beat-wheel-keys->state
@@ -123,7 +129,7 @@
       :as   opts}]
   (let [[transforms state] (beat-wheel-keys->state opts)
         id (cmp+ :beat-wheels transforms state)]
-    (beat-wheel-send id transforms state)
+    (beat-wheel-send id transforms state nil)
     id
     )
   )
@@ -141,7 +147,7 @@
          :as   opts}]
   (let [[transforms state] (beat-wheel-keys->state opts)]
     (cmp= :beat-wheels id transforms state)
-    (beat-wheel-send id transforms state))
+    (beat-wheel-send id transforms state nil))
   )
 
 (defn beat-wheel- "Removes beat-wheel from state and sends over osc."
@@ -164,8 +170,8 @@
          )
 
 (defn mallet-send "Sends instructions to create or update a mallet over osc"
-  [id transforms state]
-  (cmp-send-osc "/react/mallet" id transforms state))
+  [id transforms state maybe-clone-source-id]
+  (cmp-send-osc "/react/mallet" id transforms state maybe-clone-source-id))
 
 (defn mallet+
   [& {:keys [
@@ -182,7 +188,7 @@
         state {}
         id (cmp+ :mallets transforms state)
         ]
-    (mallet-send id transforms state)
+    (mallet-send id transforms state nil)
     id
     ))
 
@@ -254,7 +260,7 @@
 
 (defn- spawner-send "Sends instructions to create or update a spawner over osc"
   [id transforms state]
-  (cmp-send-osc "/react/spawner" id transforms state))
+  (cmp-send-osc "/react/spawner" id transforms state nil))
 
 
 (defn- spawner-keys->state
@@ -385,11 +391,11 @@
 
 
 (defn- tonnegg-send ""
-  [id transforms state fn]
+  [id transforms state fn maybe-clone-source-id]
   (when fn                                                  ; TODO: confirm note-type is Function
     (add-fn (keyword (get-in state [:Note :Val]))           ;TODO: allow namespaced keywords
             fn))
-  (cmp-send-osc "/react/tonnegg" id transforms state))
+  (cmp-send-osc "/react/tonnegg" id transforms state maybe-clone-source-id))
 
 (defn- tonnegg-keys->state
   [& {:keys [
@@ -447,7 +453,7 @@
   (let [[transforms state] (tonnegg-keys->state opts)
         id (cmp+ :tonneggs transforms state)
         ]
-    (tonnegg-send id transforms state fn)
+    (tonnegg-send id transforms state fn nil)
     id))
 
 (defn tonnegg= "Updates tonnegg in state and sends over osc."
@@ -465,7 +471,7 @@
          :as   opts}]
   (let [[transforms state] (tonnegg-keys->state opts)]
     (cmp= :tonneggs id transforms state)
-    (tonnegg-send id transforms state fn)
+    (tonnegg-send id transforms state fn nil)
     id))
 
 (defn tonnegg- "Removes beat-wheel from state and sends over osc."
@@ -501,21 +507,21 @@
 
           ))
 
-      (= 2 (count args))                                    ;clone
-      (let [[localTransform-json state-json] args
+      (>= (count args) 2)                                   ;create or clone
+      (let [[localTransform-json state-json maybe-clone-source-id] args
             transforms {:localTransform (json/read-str localTransform-json)}
             state (json/read-str state-json)
             id-new (cmp+ cmp-coll-key transforms state)
             ]
         (cond
           (= cmp-coll-key :beat-wheels)
-          (beat-wheel-send id-new transforms state)
+          (beat-wheel-send id-new transforms state maybe-clone-source-id)
 
           (= cmp-coll-key :mallets)
-          (mallet-send id-new transforms state)
+          (mallet-send id-new transforms state maybe-clone-source-id)
 
           (= cmp-coll-key :tonneggs)
-          (tonnegg-send id-new transforms state nil)
+          (tonnegg-send id-new transforms state nil maybe-clone-source-id)
 
           )))
 
