@@ -1,4 +1,4 @@
-(ns musicality.scad
+(ns musicality.scad.pc-clock
   (:use [scad-clj.scad])
   (:use [scad-clj.model])
   (:use [scad-clj.text])
