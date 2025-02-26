@@ -104,7 +104,7 @@
 
 
 ; https://www.redblobgames.com/grids/hexagons/#hex-to-pixel-axial
-(defn hex->xy [q r cell-size]
+(defn hex-pointy->xy [q r cell-size]
   [
    (float (* cell-size (+ (* (Math/sqrt 3) q)
                           (* r
@@ -113,8 +113,20 @@
    ]
   )
 
+(defn hex-flat->xy [q r cell-size]
+  [
+   (float (* cell-size (+ (* (Math/sqrt 3) q)
+                          (* r
+                             1
+                             (/ (Math/sqrt 3) 2)))))
+   (float (* cell-size (* -3/2 r)))
+
+   ]
+  )
+
+
 (defn pos-on-tonnetz [pos-center q r size]
-  (let [[x y] (hex->xy q r size)]
+  (let [[x y] (hex-flat->xy q r size)]
     [(+ x (nth pos-center 0))
      (+ y (nth pos-center 1))
      (nth pos-center 2)]))

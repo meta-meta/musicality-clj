@@ -50,7 +50,7 @@
                                       {
                                        :Interval  {:Val      (+ 1 i)
                                                    :NoteType "Irrational"}
-                                       :Amplitude (nth organ-presets/violin-ensemb-a3 i)
+                                       :Amplitude (nth organ-presets/french-horn-a2 i)
                                        :Release   0
                                        }))
                                )}
@@ -72,7 +72,10 @@
                  :label "tonality diamond"))
 
 
-  (rc/mallet+)
+  (rc/mallet- 0)
+  (rc/mallet+
+    :spawnerId sp-tonality-diamond
+    :spawnFromSpawner (rc/transform :pos [0 0.1 -0.2] :sca [2 2 2] :rot [-10 0 0]))
 
   (rc/tonnegg-clear)
 
@@ -96,6 +99,17 @@
               [8/5 9/9 5/4]
               [16/9 9/8]
               [1/1]])
+
+
+
+  (hex-grid+ sp-tonality-diamond [-0.25 1 0] :organ1
+             [[1/1 5/4 3/2 7/4 9/8 11/8]
+              [8/5 5/5 6/5 7/5 9/5 11/10]
+              [4/3 5/3 3/3 7/6 9/6 11/6]
+              [8/7 10/7 12/7 7/7 9/7 11/7]
+              [16/9 10/9 12/9 14/9 9/9 11/9]
+              [16/11 20/11 12/11 14/11 18/11 11/11]
+              ])
 
 
   (->> [[_ _ 1/1]
