@@ -32,6 +32,11 @@
 
 
 (defn bpm-set [bpm] (send-osc "f/tempo/raw" (float bpm)))
+(defn pause [] (send-osc "t/pause"))
+(defn play [] (send-osc "t/play"))
+(defn record [] (send-osc "t/record"))
+(defn stop [] (send-osc "t/stop"))
+(defn click [] (send-osc "t/click"))
 
 #_(disconnect)
 #_(connect-local)
