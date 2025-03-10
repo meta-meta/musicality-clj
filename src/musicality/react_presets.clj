@@ -31,6 +31,7 @@
    :fn     {
             :instrument "/fn"
             :note-type  :note-type/Function
+            :val        "foo"
             }
 
    :cr78   {:note-type       :note-type/UnpitchedMidi
@@ -142,8 +143,10 @@
                            :sca [0.1 0.1 0.1])
        :spawnerId        spawner-id})))
 
-(defn pos-on-circle [pos-center ratio]
-  (let [r (Numbers/toRatio ratio)
+(defn pos-on-circle
+  "Returns a vec [x y z] representing the point on a unit circle centered at pos-center, at sector represented by a ratio. 1/4 is 3 o'clock"
+  [pos-center sector]
+  (let [r (Numbers/toRatio sector)
         a (* (numerator r)
              (/ (* 2 Math/PI)
                 (denominator r)))
@@ -154,28 +157,116 @@
      (+ y (nth pos-center 1))
      (nth pos-center 2)]))
 
+
+(def ^{:deprecated "Use tonnegg-circ-seq+"}
+  tonnegg-circ
+  (fn [preset spawner-id pos-center sector val]
+    (rc/tonnegg+
+      (merge
+        preset
+        {
+         :val              val
+         :spawnFromSpawner (rc/transform
+                             :pos (pos-on-circle pos-center sector)
+                             :sca [0.1 0.1 0.1])
+         :spawnerId        spawner-id}))))
+
+(def ^{:deprecated "Use tonnegg-circ-seq+"}
+  tonnegg-circ-pattern
+  (fn [preset-kw spawner-id pos-center divisions val-fn pattern]
+    (->> pattern
+         (map-indexed
+           (fn [i v]
+             (when v
+               (tonnegg-circ
+                 (tonnegg-presets preset-kw)
+                 spawner-id
+                 pos-center
+                 (/ i divisions)
+                 (val-fn v)
+                 ))))
+         (doall))))
+
+
+
 ; TODO: pass beatwheel, use its position and spawner
-(defn tonnegg-circ [preset spawner-id pos-center pos-on-circle-ratio val]
+(defn tonnegg-on-circle+
+  [val & {:keys [
+                 pos-center
+                 preset-kw
+                 sector
+                 spawner-id
+                 ]}]
   (rc/tonnegg+
     (merge
-      preset
+      (tonnegg-presets preset-kw)
       {
        :val              val
        :spawnFromSpawner (rc/transform
-                           :pos (pos-on-circle pos-center pos-on-circle-ratio)
+                           :pos (pos-on-circle pos-center sector)
                            :sca [0.1 0.1 0.1])
        :spawnerId        spawner-id})))
 
-(defn tonnegg-circ-pattern [preset spawner-id pos-center divisions val-fn pattern]
-  (->> pattern
+(defn tonnegg-circ-seq+
+  [sq & {:keys [
+                pos-center
+                preset-kw
+                spawner-id
+                ]}]
+  (->> sq
        (map-indexed
          (fn [i v]
            (when v
-             (tonnegg-circ
-               (tonnegg-presets preset)
-               spawner-id
-               pos-center
-               (/ i divisions)
-               (val-fn v)
-               ))))
+             (tonnegg-on-circle+ v
+                                 :pos-center pos-center
+                                 :preset-kw preset-kw
+                                 :spawner-id spawner-id
+                                 :sector (/ i (count sq))
+                                 )
+             )))
        (doall)))
+
+(defn fn+ [& {:keys [
+                     fn
+                     fn-name
+                     spawn-from-cam
+                     spawn-from-spawner
+                     spawner-id
+                     ]}]
+  (rc/tonnegg+ :fn fn
+               :instrument "/fn"
+               :note-type :note-type/Function
+               :val fn-name
+               :spawnFromCam (when spawn-from-cam (rc/transform spawn-from-cam))
+               :spawnFromSpawner (when spawn-from-spawner (rc/transform spawn-from-spawner))
+               :spawnerId spawner-id))
+
+(defn organ+ [& {:keys [
+                         diapason
+                         partials-amplitudes
+                         partials-intervals
+                         partials-releases
+                         preset-kw
+                         spawn-from-cam
+                         spawn-from-spawner
+                         spawner-id
+                         ]}]
+  (rc/organ+
+    ({
+      :organ0 0
+      :organ1 1}
+     preset-kw)
+    (merge (organ-presets preset-kw)
+           {
+            :diapason         diapason
+            :partials         (->> (range 16)
+                                   (map (fn [i]
+                                          {:Interval  {:Val      (or (nth partials-intervals i) i)
+                                                       :NoteType "Irrational"}
+                                           :Amplitude (or (nth partials-amplitudes i) 0)
+                                           :Release   (or (nth partials-releases i) 0)})))
+            :spawnFromCam     (when spawn-from-cam (rc/transform spawn-from-cam))
+            :spawnFromSpawner (when spawn-from-spawner (rc/transform spawn-from-spawner))
+            :spawnerId        spawner-id
+            })))
+

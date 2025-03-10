@@ -7,9 +7,9 @@
 
 (def initial-state
   {
-   :organs      {}
    :beat-wheels {}
    :mallets     {}
+   :organs      {}
    :spawners    {}
    :tonneggs    {}
    })
@@ -18,7 +18,9 @@
 
 (defn print-state [] (clojure.pprint/pprint @components))
 
-(defn clear-state [] (reset! components initial-state))
+(defn clear-state []
+  ; TODO: cmp- for each cmp in state
+  (reset! components initial-state))
 
 (defn- next-id [cmp-coll-key]
   (let [cmp-coll (cmp-coll-key @components)]
